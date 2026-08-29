@@ -1,5 +1,5 @@
 import React from 'react';
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { format, parseISO } from 'date-fns';
 import { getDateLocale } from '../lib/i18n';
 
@@ -51,7 +51,6 @@ export function WeatherChart({ data, settings }: { data: any; settings: any }) {
             domain={['auto', 'auto']}
             tickFormatter={(val) => `${Math.round(val)}°`}
           />
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--forecast-chart-grid)" />
           <Tooltip 
             wrapperClassName="weather-chart-tooltip"
             contentStyle={{ borderRadius: '8px', border: '1px solid rgba(148,163,184,0.55)', backgroundColor: settings?.theme === 'dark' ? 'rgba(51, 65, 85, 0.92)' : 'rgba(0, 0, 0, 0.55)', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.5)' }}
