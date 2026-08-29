@@ -53,6 +53,7 @@ export function WeatherChart({ data, settings }: { data: any; settings: any }) {
           />
           <Tooltip 
             wrapperClassName="weather-chart-tooltip"
+            cursor={false}
             contentStyle={{ borderRadius: '8px', border: '1px solid rgba(148,163,184,0.55)', backgroundColor: settings?.theme === 'dark' ? 'rgba(51, 65, 85, 0.92)' : 'rgba(0, 0, 0, 0.55)', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.5)' }}
             formatter={(value: number) => [`${value}°${settings?.tempUnit === 'fahrenheit' ? 'F' : 'C'}`, 'Temperature']}
             labelStyle={{ color: '#fff', fontWeight: 600, marginBottom: '4px', fontSize: '12px' }}
@@ -63,6 +64,7 @@ export function WeatherChart({ data, settings }: { data: any; settings: any }) {
             dataKey="temp" 
             stroke="#6366f1" 
             strokeWidth={3}
+            activeDot={false}
             fillOpacity={1} 
             fill="url(#colorTemp)" 
           />
