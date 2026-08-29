@@ -433,13 +433,12 @@ export default function App() {
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'auto',
           };
 
-          // GPS is available without internet. Apply and persist it immediately;
-          // reverse geocoding is only an optional online enhancement.
+          // Apply GPS immediately, then resolve the coordinates to a city. The
+          // browser's navigator.onLine flag can be stale in installed PWAs, so
+          // do not use it to decide whether the reverse-geocode request runs.
           setLocation(offlineGpsLocation);
-          if (navigator.onLine) {
-            const loc = await reverseGeocode(lat, lon);
-            if (loc) setLocation(loc);
-          }
+          const loc = await reverseGeocode(lat, lon);
+          if (loc && (loc.name !== 'Current Location' || loc.country)) setLocation(loc);
         },
         (error) => {
           console.log("Geolocation info:", error.message);
