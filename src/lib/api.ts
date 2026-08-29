@@ -56,9 +56,10 @@ export async function reverseGeocode(lat: number, lon: number): Promise<Location
     const res = await fetch(`/api/reverse-geocode?lat=${lat}&lon=${lon}`);
     if (!res.ok) return null;
     const data = await res.json();
+    const displayName = typeof data.displayName === 'string' ? data.displayName.split(',')[0].trim() : '';
     return {
       id: Math.floor(Math.random() * 1000000),
-      name: data.city || data.locality || data.principalSubdivision || "Current Location",
+      name: data.city || data.locality || data.principalSubdivision || displayName || "Current Location",
       latitude: lat,
       longitude: lon,
       country: data.countryName || "",

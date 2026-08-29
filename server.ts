@@ -325,6 +325,7 @@ async function startServer() {
         locality: address.city_district || address.suburb || '',
         principalSubdivision: address.state || address.region || '',
         countryName: address.country || '',
+        displayName: fallback.display_name || '',
       });
     } catch (error) {
       console.error("Server proxy error (Reverse Geocode):", error);
