@@ -490,15 +490,29 @@ async function startServer() {
     app.get('/sw.js', (req, res) => {
       res.setHeader('Service-Worker-Allowed', '/');
       res.setHeader('Content-Type', 'application/javascript');
-      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       res.sendFile(path.join(distPath, 'sw.js'));
     });
     app.get(['/manifest.json', '/manifest.webmanifest'], (req, res) => {
       res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
-      res.sendFile(path.join(distPath, 'manifest.json'));
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.sendFile(path.join(distPath, 'manifest.webmanifest'));
     });
-    app.use(express.static(distPath));
+    app.get('/', (req, res) => {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+    app.use(express.static(distPath, {
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('index.html')) {
+          res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        } else if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        }
+      },
+    }));
     app.get('*', (req, res) => {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }

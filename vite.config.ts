@@ -11,6 +11,11 @@ export default defineConfig(() => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
+        workbox: {
+          cleanupOutdatedCaches: true,
+          clientsClaim: true,
+          skipWaiting: true,
+        },
         includeAssets: ['favicon.png', 'icon-192x192.png', 'icon-512x512.png', 'icon-maskable-512x512.png', 'apple-touch-icon.png'],
         manifest: {
           name: 'WeatherNow',
