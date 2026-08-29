@@ -65,6 +65,13 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, setSetti
     setSettings({ ...settings, savedLocations: settings.savedLocations.filter(l => l.id !== id) });
   };
 
+  const handleEnableWeatherAlerts = async () => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      await Notification.requestPermission();
+    }
+    setSettings({ ...settings, severeAlerts: true });
+  };
+
   return (
     <section className="settings-panel flex-1 p-6 sm:p-8 bg-sky-100 dark:bg-slate-950 overflow-y-auto">
       <div className="max-w-3xl mx-auto flex flex-col gap-8">
@@ -239,7 +246,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, setSetti
                 </div>
                 <div className="flex bg-sky-100 dark:bg-slate-950 p-1 rounded-lg border border-sky-200 dark:border-slate-800">
                   <button 
-                    onClick={() => setSettings({ ...settings, severeAlerts: true })}
+                    onClick={handleEnableWeatherAlerts}
                     className={`px-2 py-1 sm:px-3 sm:py-1.5 rounded-md text-[10px] sm:text-xs font-medium transition-colors ${settings.severeAlerts !== false ? 'bg-indigo-600 text-white' : 'text-sky-800 dark:text-slate-400 hover:text-sky-950 dark:text-slate-200'}`}
                   >{t('enabled')}</button>
                   <button 

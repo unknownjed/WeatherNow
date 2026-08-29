@@ -458,6 +458,36 @@ export default function App() {
     setShowResults(false);
   };
 
+  useEffect(() => {
+    if (!weather?.current || settings.severeAlerts === false || !('Notification' in window)) return;
+
+    const showForecastNotification = async () => {
+      if (!document.hidden || Notification.permission !== 'granted') return;
+      const current = weather.current;
+      const forecast = getWeatherDescription(current.weather_code, settings.language).text;
+      const body = `${forecast} • ${Math.round(current.temperature_2m)}°${settings.tempUnit === 'fahrenheit' ? 'F' : 'C'} • ${location.name}`;
+      const options: NotificationOptions = {
+        body,
+        icon: '/icon-192x192.png',
+        badge: '/icon-192x192.png',
+        tag: `weathernow-forecast-${location.id}`,
+      };
+      const registration = await navigator.serviceWorker?.ready.catch(() => null);
+      if (registration) await registration.showNotification('WeatherNow Forecast', options);
+      else new Notification('WeatherNow Forecast', options);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) void showForecastNotification();
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    const interval = window.setInterval(() => void showForecastNotification(), 60 * 60 * 1000);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.clearInterval(interval);
+    };
+  }, [weather, settings.severeAlerts, settings.language, settings.tempUnit, location.id, location.name]);
+
   if (isInitializing) {
     return (
       <div className="h-screen w-full bg-sky-100 dark:bg-slate-950 flex flex-col items-center justify-center gap-4">

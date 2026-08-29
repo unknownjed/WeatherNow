@@ -164,6 +164,15 @@ export function MusicWidget({ language = 'en' }: { language?: string }) {
     if (added && nextIndex < youtubeResultsRef.current.length) playYouTubeAt(nextIndex);
   };
 
+  const closeYouTubePlayer = () => {
+    youtubeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'stopVideo', args: [] }), '*');
+    youtubeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'pauseVideo', args: [] }), '*');
+    youtubeIsPlayingRef.current = false;
+    youtubeWasPlayingRef.current = false;
+    setYoutubeId(null);
+    window.dispatchEvent(new CustomEvent('weathernow:music-state', { detail: { playing: false } }));
+  };
+
   useEffect(() => {
     const handleYouTubeState = (event: MessageEvent) => {
       if (!String(event.origin).includes('youtube')) return;
@@ -366,7 +375,7 @@ export function MusicWidget({ language = 'en' }: { language?: string }) {
           />
           <button
             type="button"
-            onClick={() => { setYoutubeId(null); youtubeIsPlayingRef.current = false; }}
+            onClick={closeYouTubePlayer}
             className="absolute right-2 top-2 z-10 rounded-full bg-black/65 p-2 text-white shadow-lg transition hover:bg-black/85"
             aria-label="Close YouTube player"
             title="Close"
