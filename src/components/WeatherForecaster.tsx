@@ -275,12 +275,13 @@ export function WeatherForecaster({ locationName, temperature, description, feel
     if (speechAPI && locationName && !hasAutoPlayed) {
       if (autoSpeak) {
         hasAutoPlayed = true;
-        // Slight delay to ensure smooth loading and voices availability
+        // Start promptly once the speech API is ready; voice enumeration has
+        // its own voiceschanged/refresh handling above.
         setTimeout(() => {
           if (!isGloballyPlaying) {
             toggleSpeaking();
           }
-        }, 1000);
+        }, 150);
       } else {
         hasAutoPlayed = true; // Mark as played so it doesn't trigger if setting toggled later
       }
