@@ -306,9 +306,26 @@ async function startServer() {
       const { lat, lon } = req.query;
       const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`;
       const response = await fetch(url);
-      if (!response.ok) throw new Error(`Reverse Geocode API Error: ${response.status}`);
-      const data = await response.json();
-      res.json(data);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.city || data.locality || data.principalSubdivision) return res.json(data);
+      }
+
+      // Fallback for mobile networks or rate limits affecting the primary API.
+      const fallbackUrl = `https://nominatim.openstreetmap.org/reverse?lat=${encodeURIComponent(String(lat))}&lon=${encodeURIComponent(String(lon))}&format=jsonv2&zoom=10&addressdetails=1`;
+      const fallbackResponse = await fetch(fallbackUrl, {
+        headers: { 'User-Agent': 'WeatherNow/1.0 contact' },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!fallbackResponse.ok) throw new Error(`Reverse Geocode fallback error: ${fallbackResponse.status}`);
+      const fallback = await fallbackResponse.json();
+      const address = fallback.address || {};
+      res.json({
+        city: address.city || address.town || address.municipality || address.village || address.county || '',
+        locality: address.city_district || address.suburb || '',
+        principalSubdivision: address.state || address.region || '',
+        countryName: address.country || '',
+      });
     } catch (error) {
       console.error("Server proxy error (Reverse Geocode):", error);
       res.status(500).json({ error: "Failed to reverse geocode" });

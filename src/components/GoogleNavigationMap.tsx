@@ -154,6 +154,7 @@ function MapLibreVectorLayer({ styleUrl, onReady }: { styleUrl: string; onReady:
     let vectorLayer: ReturnType<typeof maplibreGL> | null = null;
     let fallbackLayer: L.TileLayer | null = null;
     let loadTimer: ReturnType<typeof setTimeout> | null = null;
+    let vectorMap: MapLibreMap | null = null;
     let disposed = false;
 
     const useRasterFallback = () => {
@@ -169,12 +170,13 @@ function MapLibreVectorLayer({ styleUrl, onReady }: { styleUrl: string; onReady:
 
     try {
       vectorLayer = maplibreGL({ style: styleUrl }).addTo(leafletMap);
-      const vectorMap = vectorLayer.getMaplibreMap();
+      vectorMap = vectorLayer.getMaplibreMap();
       onReady(vectorMap);
       vectorMap.once('load', () => {
         if (loadTimer) clearTimeout(loadTimer);
       });
-      loadTimer = setTimeout(useRasterFallback, 10000);
+      vectorMap.on('error', useRasterFallback);
+      loadTimer = setTimeout(useRasterFallback, 6000);
     } catch (error) {
       console.error('Route Map vector layer failed; using raster fallback.', error);
       useRasterFallback();
@@ -183,6 +185,7 @@ function MapLibreVectorLayer({ styleUrl, onReady }: { styleUrl: string; onReady:
     return () => {
       disposed = true;
       if (loadTimer) clearTimeout(loadTimer);
+      if (vectorMap) vectorMap.off('error', useRasterFallback);
       onReady(null);
       if (vectorLayer && leafletMap.hasLayer(vectorLayer)) leafletMap.removeLayer(vectorLayer);
       if (fallbackLayer && leafletMap.hasLayer(fallbackLayer)) leafletMap.removeLayer(fallbackLayer);

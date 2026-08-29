@@ -444,7 +444,7 @@ export default function App() {
         (error) => {
           console.log("Geolocation info:", error.message);
         },
-        { enableHighAccuracy: false, timeout: 3000, maximumAge: 300000 }
+        { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
       );
     }
   };
