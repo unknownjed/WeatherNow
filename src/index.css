@@ -1,0 +1,219 @@
+@import "tailwindcss";
+
+html, body, #root { width: 100%; max-width: 100%; overflow-x: hidden !important; }
+#root > div, #root main, #root main > *, #root main section { min-width: 0; max-width: 100%; overflow-x: hidden; }
+
+@custom-variant dark (&:is(.dark *));
+
+/* WeatherNow light theme: #A7AFB6 gray surfaces with blue interactive accents.
+   These tokens intentionally apply only when dark mode is not active. */
+:root:not(.dark) {
+  --color-sky-50: #a7afb6;
+  --color-sky-100: #b8bec4;
+  --color-sky-200: #c8cdd1;
+  --color-sky-300: #d7dbde;
+  --color-sky-400: #72b5ff;
+  --color-sky-500: #3b93f6;
+  --color-sky-600: #2374dc;
+  --color-sky-700: #1d5db5;
+  --color-sky-800: #1d4f91;
+  --color-sky-900: #1d4374;
+  --color-sky-950: #142b4d;
+
+  --color-indigo-50: #eff6ff;
+  --color-indigo-100: #dbeafe;
+  --color-indigo-200: #bfdbfe;
+  --color-indigo-300: #93c5fd;
+  --color-indigo-400: #60a5fa;
+  --color-indigo-500: #3b82f6;
+  --color-indigo-600: #2563eb;
+  --color-indigo-700: #1d4ed8;
+  --color-indigo-800: #1e40af;
+  --color-indigo-900: #1e3a8a;
+  --color-indigo-950: #172554;
+}
+
+:root:not(.dark),
+:root:not(.dark) body,
+:root:not(.dark) #root {
+  background-color: #a7afb6;
+}
+
+/* Blue outer dashboard frame in light mode; inset keeps the layout size fixed. */
+:root:not(.dark) #root {
+  box-shadow: inset 0 0 0 2px #3b82f6;
+}
+
+/* Keep legacy white tile classes consistent with the gray frame. */
+:root:not(.dark) #root .bg-white {
+  background-color: #a7afb6 !important;
+}
+
+/* Forecast periods stay white in light mode so weather artwork remains clear. */
+:root:not(.dark) #root .forecast-period-tile {
+  background-color: #ffffff !important;
+}
+
+:root:not(.dark) #root .forecast-temperature-chart {
+  --forecast-chart-label: #1e293b;
+  --forecast-chart-grid: #64748b;
+}
+
+:root.dark #root .forecast-temperature-chart {
+  --forecast-chart-label: #64748b;
+  --forecast-chart-grid: #334155;
+}
+
+/* Segmented toggle tracks use a clean white surface in light mode. */
+:root:not(.dark) #root .settings-panel .bg-sky-100.p-1.rounded-lg {
+  background-color: #ffffff !important;
+}
+
+/* A restrained edge glow for current-weather details in dark mode only. */
+:root.dark #root .current-weather-detail-tile {
+  border: 1px solid rgba(56, 189, 248, 0.48);
+  box-shadow: none;
+}
+
+:root:not(.dark) #root .settings-panel .settings-language-select,
+:root:not(.dark) #root .settings-panel .settings-saved-locations {
+  background-color: #ffffff !important;
+}
+
+:root:not(.dark) #root .current-weather-tile {
+  background-color: #a7afb6 !important;
+  background-image: none !important;
+  border-color: #bae6fd !important;
+}
+
+.news-item-card,
+.news-item-card:link,
+.news-item-card:visited,
+.news-item-card:hover,
+.news-item-card:focus,
+.news-item-card:active {
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Light-mode dashboard typography is uniformly black. Icons retain their own colors. */
+:root:not(.dark) #root :where(div, span, p, h1, h2, h3, h4, h5, h6, label, input, textarea, select, option, a, time, small, strong):not(.weather-map):not(.weather-map *):not(button *) {
+  color: #000000 !important;
+}
+
+/* Keep map labels and popup text inside the map tile at narrow sizes. */
+.weather-map .leaflet-popup-content-wrapper,
+.weather-map .leaflet-popup-content {
+  max-width: min(280px, calc(100vw - 32px));
+  overflow-wrap: anywhere;
+}
+.weather-map .leaflet-popup-content {
+  margin: 10px;
+}
+.weather-map .truncate {
+  min-width: 0;
+  max-width: 100%;
+}
+.weather-map button,
+.weather-map input,
+.weather-map select {
+  max-width: 100%;
+}
+
+@media (max-width: 639px) {
+  :root:not(.dark) .header-city-results,
+  :root:not(.dark) .header-city-results button,
+  :root:not(.dark) .header-city-results span,
+  :root:not(.dark) .mobile-bottom-nav button,
+  :root:not(.dark) .mobile-bottom-nav button svg,
+  :root:not(.dark) .mobile-bottom-nav button span { color: #000 !important; }
+  .dark .mobile-bottom-nav button,
+  .dark .mobile-bottom-nav button svg,
+  .dark .mobile-bottom-nav button span { color: #fff !important; }
+  .dark .mobile-bottom-nav button[class*="text-indigo-"],
+  .dark .mobile-bottom-nav button[class*="text-indigo-"] svg,
+  .dark .mobile-bottom-nav button[class*="text-indigo-"] span { color: #fff !important; }
+  .dark .settings-panel button[class*="bg-blue-"] { background-color: #4f46e5 !important; }
+  .dark .settings-panel button[class*="bg-blue-"]:hover { background-color: #6366f1 !important; }
+  .weather-map .text-xs { font-size: 0.625rem !important; line-height: 0.85rem !important; }
+  .weather-map .text-\[11px\] { font-size: 0.5625rem !important; line-height: 0.75rem !important; }
+  .weather-map .text-\[10px\] { font-size: 0.5rem !important; line-height: 0.7rem !important; }
+  .weather-map .text-\[9px\] { font-size: 0.4375rem !important; line-height: 0.625rem !important; }
+  .weather-map [class*="absolute"]:not(.leaflet-pane) { max-width: calc(100% - 0.5rem); }
+  .weather-map .leaflet-popup-content-wrapper { max-width: calc(100vw - 2rem); }
+}
+
+html.dark .mobile-bottom-nav button,
+html.dark .mobile-bottom-nav button svg,
+html.dark .mobile-bottom-nav button span,
+html.dark .desktop-sidebar-nav > div,
+html.dark .desktop-sidebar-nav > div svg,
+html.dark .mobile-bottom-nav button svg * { color: #fff !important; stroke: #fff !important; }
+html.dark .settings-panel button[class*="bg-blue-600"],
+html.dark .settings-panel button[class*="bg-indigo-600"] { background-color: #4f46e5 !important; color: #fff !important; }
+html.dark .settings-panel button[class*="bg-blue-600"]:hover,
+html.dark .settings-panel button[class*="bg-indigo-600"]:hover { background-color: #6366f1 !important; }
+
+@media (max-width: 767px) and (orientation: portrait) {
+  html, body, #root { width: 100%; max-width: 100%; overflow-x: hidden !important; }
+  #root > div, #root main { max-width: 100%; overflow-x: hidden; }
+  html.dark #root .mobile-bottom-nav button,
+  html.dark #root .mobile-bottom-nav button span { color: #ffffff !important; }
+  html.dark #root .mobile-bottom-nav button svg,
+  html.dark #root .mobile-bottom-nav button svg * { color: #ffffff !important; stroke: #ffffff !important; }
+}
+
+@media (max-width: 767px) and (orientation: portrait) {
+  html.dark body #root nav.mobile-bottom-nav button,
+  html.dark body #root nav.mobile-bottom-nav button * { color: #fff !important; stroke: #fff !important; }
+}
+
+/* The theme class is applied directly to <html>; keep dark mobile nav colors authoritative. */
+@media (max-width: 639px) {
+  html.dark .mobile-bottom-nav button,
+  html.dark .mobile-bottom-nav button svg,
+  html.dark .mobile-bottom-nav button span { color: #fff !important; }
+  html.dark .mobile-bottom-nav button[class*="text-indigo-"],
+  html.dark .mobile-bottom-nav button[class*="text-indigo-"] svg,
+  html.dark .mobile-bottom-nav button[class*="text-indigo-"] span { color: #fff !important; }
+}
+
+@media (max-width: 639px) {
+  html.dark .settings-panel button[class*="bg-blue-600"],
+  html.dark .settings-panel button[class*="bg-indigo-600"] { background-color: #4f46e5 !important; color: #fff !important; }
+  html.dark .settings-panel button[class*="bg-blue-600"]:hover,
+  html.dark .settings-panel button[class*="bg-indigo-600"]:hover { background-color: #6366f1 !important; }
+}
+
+:root:not(.dark) #root .install-app-button,
+:root:not(.dark) #root .install-app-button * {
+  color: #ffffff !important;
+}
+
+:root:not(.dark) #root .forecaster-tooltip,
+:root:not(.dark) #root .forecaster-tooltip * { color: #fff !important; -webkit-text-fill-color: #fff !important; }
+:root:not(.dark) #root .forecaster-tooltip { background-color: #0f172a !important; }
+:root:not(.dark) #root .weather-chart-tooltip,
+:root:not(.dark) #root .weather-chart-tooltip *,
+:root:not(.dark) #root .recharts-tooltip-wrapper,
+:root:not(.dark) #root .recharts-tooltip-wrapper * { color: #fff !important; -webkit-text-fill-color: #fff !important; }
+:root.dark #root .weather-chart-tooltip .recharts-default-tooltip,
+:root.dark #root .weather-chart-tooltip .recharts-tooltip-wrapper,
+:root.dark #root .weather-chart-tooltip { background-color: rgba(15, 23, 42, 0.92) !important; }
+
+:root:not(.dark) #root .music-scan-button,
+:root:not(.dark) #root .music-scan-button * {
+  color: #ffffff !important;
+}
+
+:root:not(.dark) #root .settings-panel button[class*="bg-blue-"],
+:root:not(.dark) #root .settings-panel button[class*="bg-blue-"] *,
+:root:not(.dark) #root .settings-panel button[class*="bg-indigo-"],
+:root:not(.dark) #root .settings-panel button[class*="bg-indigo-"] * {
+  color: #ffffff !important;
+}
+
+:root:not(.dark) #root .settings-panel button:not([class*="bg-blue-"]):not([class*="bg-indigo-"]),
+:root:not(.dark) #root .settings-panel button:not([class*="bg-blue-"]):not([class*="bg-indigo-"]) * {
+  color: #000000 !important;
+}

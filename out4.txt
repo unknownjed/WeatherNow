@@ -1,0 +1,33 @@
+{
+  creator: '',
+  title: 'Heavy rain, storms ramp up flood and severe threat in Southeast, Mid-South',
+  link: 'https://www.foxweather.com/watch/fmc-jprbatrlje1f6krr?utm_source=flipboard&utm_content=topic%2Fweather',
+  pubDate: 'Mon, 24 Aug 2026 10:22:58 GMT',
+  author: '',
+  mediaContent: [Object: null prototype] {
+    '$': [Object: null prototype] {
+      url: 'https://ic-cdn.flipboard.com/foxweather.com/6651874151e45be966c31d233f6655afe6e24fcb/_large.webp',
+      medium: 'image',
+      width: '992',
+      height: '558'
+    }
+  },
+  content: 'Repeated rounds of heavy rain and thunderstorms are increasing the risk for severe weather and flash flooding across the Southeast and Mid-South all …',
+  contentSnippet: 'Repeated rounds of heavy rain and thunderstorms are increasing the risk for severe weather and flash flooding across the Southeast and Mid-South all …',
+  guid: 'flipboard-0Hl2kWIvRg2enAE2udXRWw:a:3900021165-1787566978',
+  categories: [
+    [Object: null prototype] {
+      _: 'Rainfall',
+      '$': [Object: null prototype]
+    },
+    [Object: null prototype] {
+      _: 'Weather',
+      '$': [Object: null prototype]
+    },
+    [Object: null prototype] {
+      _: 'Floods',
+      '$': [Object: null prototype]
+    }
+  ],
+  isoDate: '2026-08-24T10:22:58.000Z'
+}

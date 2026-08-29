@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f172a" />
+    <script>
+      // Capture the browser install event before the React bundle loads.
+      window.addEventListener('beforeinstallprompt', function (event) {
+        event.preventDefault();
+        window.__weatherNowInstallPrompt = event;
+        window.dispatchEvent(new Event('weathernow-install-ready'));
+      });
+      window.addEventListener('appinstalled', function () {
+        window.__weatherNowInstallPrompt = null;
+      });
+    </script>
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="WeatherNow" />
+    <meta name="application-name" content="WeatherNow" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <title>WeatherNow - Live Weather & Forecast</title>
+    <meta name="description" content="Real-time weather forecasts, local temperature trends, and historical climate analysis." />
+    <meta property="og:title" content="WeatherNow" />
+    <meta property="og:description" content="Real-time weather forecasts, local temperature trends, and historical climate analysis." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

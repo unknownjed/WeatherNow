@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script>
+  setTimeout(() => {
+    console.log(window.speechSynthesis.getVoices().map(v => v.lang + ' ' + v.name));
+  }, 1000);
+</script>
+</body>
+</html>

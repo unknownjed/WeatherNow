@@ -1,0 +1,9 @@
+{
+  title: 'Typhoon Saudel weakens, likely to come closest to Taiwan Friday - Taipei Times',
+  link: 'https://news.google.com/rss/articles/CBMiekFVX3lxTE8wRnNxT0pUMW9jdFN1akdzN0hCNmt4UGEyM3hNT0ZwSDV4dTZ0bmZKWHB4N2NyNGVOQmVDNHdBRjNpZ1VBZGFxdjNBWTJXbmlVOG5XWjMtM19jUndHbHZKYnpLMUZLQ0UtUzdCMkpXNjZaV2FZd2xhUW13?oc=5',
+  pubDate: 'Mon, 24 Aug 2026 16:00:00 GMT',
+  content: '<a href="https://news.google.com/rss/articles/CBMiekFVX3lxTE8wRnNxT0pUMW9jdFN1akdzN0hCNmt4UGEyM3hNT0ZwSDV4dTZ0bmZKWHB4N2NyNGVOQmVDNHdBRjNpZ1VBZGFxdjNBWTJXbmlVOG5XWjMtM19jUndHbHZKYnpLMUZLQ0UtUzdCMkpXNjZaV2FZd2xhUW13?oc=5" target="_blank">Typhoon Saudel weakens, likely to come closest to Taiwan Friday</a>&nbsp;&nbsp;<font color="#6f6f6f">Taipei Times</font>',
+  contentSnippet: 'Typhoon Saudel weakens, likely to come closest to Taiwan Friday  Taipei Times',
+  guid: 'CBMiekFVX3lxTE8wRnNxT0pUMW9jdFN1akdzN0hCNmt4UGEyM3hNT0ZwSDV4dTZ0bmZKWHB4N2NyNGVOQmVDNHdBRjNpZ1VBZGFxdjNBWTJXbmlVOG5XWjMtM19jUndHbHZKYnpLMUZLQ0UtUzdCMkpXNjZaV2FZd2xhUW13',
+  isoDate: '2026-08-24T16:00:00.000Z'
+}

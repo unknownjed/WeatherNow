@@ -1,0 +1,6 @@
+{
+  "name": "WeatherNow",
+  "description": "Real-time weather forecasts, local temperature trends, and historical climate analysis.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
