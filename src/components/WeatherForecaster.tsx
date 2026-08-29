@@ -288,6 +288,21 @@ export function WeatherForecaster({ locationName, temperature, description, feel
     }
   }, [speechAPI, locationName, autoSpeak]);
 
+  // Some desktop/mobile browsers pause Web Speech when a window is minimized.
+  // Resume the existing utterance in place; never enqueue or restart it.
+  useEffect(() => {
+    if (!speechAPI) return;
+    const resumeSpeech = () => {
+      if (isGloballyPlaying && speechAPI.paused) speechAPI.resume();
+    };
+    document.addEventListener('visibilitychange', resumeSpeech);
+    const keepAlive = window.setInterval(resumeSpeech, 1000);
+    return () => {
+      document.removeEventListener('visibilitychange', resumeSpeech);
+      window.clearInterval(keepAlive);
+    };
+  }, [speechAPI]);
+
   const toggleSpeaking = () => {
     if (!speechAPI) return;
 
