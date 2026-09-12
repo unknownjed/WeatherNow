@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Podcast, Square } from 'lucide-react';
+import { selectForecastVoice } from '../lib/forecastSpeech';
 import { getWeatherDescription } from '../lib/api';
+import { isNativeMobile, NativeSpeech } from '../lib/nativeMobile';
+import { useTranslation } from '../lib/i18n';
 
 interface WeatherForecasterProps {
   locationName: string;
@@ -9,6 +12,8 @@ interface WeatherForecasterProps {
   feelsLike: number;
   humidity: number;
   windSpeed: number;
+  windUnit?: 'kmh' | 'mph';
+  observationStation?: string;
   high?: number;
   low?: number;
   currentCode?: number;
@@ -23,7 +28,20 @@ interface WeatherForecasterProps {
   tempUnit?: 'celsius' | 'fahrenheit';
   autoSpeak?: boolean;
   language?: string;
+  marineConditions?: {
+    wave_height?: number;
+    wave_period?: number;
+    sea_surface_temperature?: number;
+    ocean_current_velocity?: number;
+  };
 }
+
+const FORECASTER_LABELS: Record<string, string> = {
+  en: 'Click to forecast weather', es: 'Pulsa para escuchar el pronóstico', fr: 'Cliquez pour écouter les prévisions',
+  de: 'Klicken für Wettervorhersage', it: 'Tocca per ascoltare le previsioni', pt: 'Toque para ouvir a previsão',
+  ja: 'タップして天気予報を聞く', ko: '눌러서 날씨 예보 듣기', zh: '点击收听天气预报', hi: 'मौसम पूर्वानुमान सुनने के लिए टैप करें',
+  ru: 'Нажмите, чтобы услышать прогноз', ar: 'اضغط لسماع توقعات الطقس',
+};
 
 // Global state to keep track of speech across tab switching (component unmounts)
 let isGloballyPlaying = false;
@@ -32,7 +50,15 @@ let globalUtterance: SpeechSynthesisUtterance | null = null;
 let speechRequestVersion = 0;
 const stateListeners = new Set<(playing: boolean) => void>();
 
+// Prime browser voice discovery as soon as this module is loaded. This is safe
+// without autoplay permission and avoids waiting for the Current Weather card's
+// first effect before the browser begins loading its speech voices.
+if (typeof window !== 'undefined' && window.speechSynthesis) {
+  try { window.speechSynthesis.getVoices(); } catch {}
+}
+
 const updateGlobalState = (playing: boolean) => {
+  if (isGloballyPlaying === playing) return;
   isGloballyPlaying = playing;
   stateListeners.forEach(listener => listener(playing));
   if (typeof window !== 'undefined') {
@@ -221,10 +247,11 @@ function getPreparations(code: number | undefined, wind: number, locationName: s
   }
 }
 
-export function WeatherForecaster({ locationName, temperature, description, feelsLike, humidity, windSpeed, high, low, currentCode, tomorrowHigh, tomorrowLow, tomorrowCode, hourlyData, tempUnit = 'celsius', autoSpeak = false, language = 'en' }: WeatherForecasterProps) {
+export function WeatherForecaster({ locationName, temperature, description, feelsLike, humidity, windSpeed, windUnit = 'kmh', observationStation, high, low, currentCode, tomorrowHigh, tomorrowLow, tomorrowCode, hourlyData, tempUnit = 'celsius', autoSpeak = false, language = 'en', marineConditions }: WeatherForecasterProps) {
+  const t = useTranslation(language);
   const [isPlaying, setIsPlaying] = useState(isGloballyPlaying);
   const [showHint, setShowHint] = useState(true);
-  const [speechAPI, setSpeechAPI] = useState<SpeechSynthesis | null>(null);
+  const [speechAPI, setSpeechAPI] = useState<SpeechSynthesis | null>(() => typeof window !== 'undefined' && window.speechSynthesis ? window.speechSynthesis : null);
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
 
   useEffect(() => {
@@ -236,8 +263,7 @@ export function WeatherForecaster({ locationName, temperature, description, feel
       synthesis.addEventListener('voiceschanged', refreshVoices);
 
       // Several Android/iOS engines populate voices only after an initial read.
-      window.setTimeout(refreshVoices, 250);
-      window.setTimeout(refreshVoices, 1000);
+      window.setTimeout(refreshVoices, 150);
 
       // Sync with global state
       setIsPlaying(isGloballyPlaying);
@@ -261,10 +287,12 @@ export function WeatherForecaster({ locationName, temperature, description, feel
   }, []);
 
   useEffect(() => {
-    const stopSpeakingForMusic = () => {
+    const stopSpeakingForMusic = (event: Event) => {
+      if (!(event as CustomEvent<{ playing: boolean }>).detail?.playing) return;
       speechRequestVersion += 1;
       globalUtterance = null;
       window.speechSynthesis?.cancel();
+      if (isNativeMobile) void NativeSpeech.stop();
       updateGlobalState(false);
     };
     window.addEventListener('weathernow:music-state', stopSpeakingForMusic);
@@ -272,16 +300,16 @@ export function WeatherForecaster({ locationName, temperature, description, feel
   }, []);
 
   useEffect(() => {
-    if (speechAPI && locationName && !hasAutoPlayed) {
+    if ((speechAPI || isNativeMobile) && locationName && !hasAutoPlayed) {
       if (autoSpeak) {
         hasAutoPlayed = true;
         // Start promptly once the speech API is ready; voice enumeration has
         // its own voiceschanged/refresh handling above.
-        setTimeout(() => {
+        window.setTimeout(() => {
           if (!isGloballyPlaying) {
             toggleSpeaking();
           }
-        }, 150);
+        }, 0);
       } else {
         hasAutoPlayed = true; // Mark as played so it doesn't trigger if setting toggled later
       }
@@ -303,11 +331,13 @@ export function WeatherForecaster({ locationName, temperature, description, feel
     };
   }, [speechAPI]);
 
-  const toggleSpeaking = () => {
-    if (!speechAPI) return;
+  const toggleSpeaking = async () => {
+    if (!speechAPI && !isNativeMobile) return;
 
     if (isGloballyPlaying) {
-      speechAPI.cancel();
+      speechRequestVersion += 1;
+      speechAPI?.cancel();
+      if (isNativeMobile) void NativeSpeech.stop();
       updateGlobalState(false);
     } else {
       const requestVersion = ++speechRequestVersion;
@@ -366,6 +396,10 @@ export function WeatherForecaster({ locationName, temperature, description, feel
         }
       }
 
+      // Missing station fields must never become a spoken zero/NaN value.
+      if (!Number.isFinite(feelsLike)) {
+        script = `WeatherNow. ${locationName}. PAGASA. ${t('station')}: ${observationStation || locationName}. ${t('temperature')}: ${Math.round(temperature)}°${tempUnit === 'fahrenheit' ? 'F' : 'C'}. ${t('humidity')}: ${humidity}%. ${t('wind')}: ${Math.round(windSpeed)} ${t(windUnit)}.`;
+      }
       const prep = getPreparations(currentCode, windSpeed, locationName, temperature, humidity, tempUnit, language);
       if (prep) {
         script += ' ' + prep;
@@ -386,6 +420,21 @@ export function WeatherForecaster({ locationName, temperature, description, feel
         else if (language === 'hi') script += ` कल के लिए, ${tomorrowDesc} की उम्मीद है, अधिकतम ${Math.round(tomorrowHigh)} और न्यूनतम ${Math.round(tomorrowLow)} के साथ।`;
         else script += ` Looking ahead to tomorrow, expect ${tomorrowDesc} conditions, with a high of ${Math.round(tomorrowHigh)} and a low of ${Math.round(tomorrowLow)}.`;
       }
+
+      if (Number.isFinite(marineConditions?.wave_height)) {
+        const waveHeight = Math.round((marineConditions?.wave_height as number) * 10) / 10;
+        const wavePeriod = Number.isFinite(marineConditions?.wave_period) ? Math.round(marineConditions?.wave_period as number) : null;
+        const seaTemperature = Number.isFinite(marineConditions?.sea_surface_temperature) ? Math.round(tempUnit === 'fahrenheit' ? (marineConditions?.sea_surface_temperature as number) * 9 / 5 + 32 : marineConditions?.sea_surface_temperature as number) : null;
+        if (language === 'es') script += ` En las condiciones marinas, la altura de las olas es de ${waveHeight} metros${wavePeriod !== null ? `, con un período de ${wavePeriod} segundos` : ''}${seaTemperature !== null ? `, y la temperatura del mar es de ${seaTemperature} grados` : ''}.`;
+        else if (language === 'fr') script += ` Pour les conditions marines, les vagues mesurent ${waveHeight} mètres${wavePeriod !== null ? `, avec une période de ${wavePeriod} secondes` : ''}${seaTemperature !== null ? `, et la température de la mer est de ${seaTemperature} degrés` : ''}.`;
+        else if (language === 'de') script += ` Die Meeresbedingungen zeigen eine Wellenhöhe von ${waveHeight} Metern${wavePeriod !== null ? ` bei einer Periode von ${wavePeriod} Sekunden` : ''}${seaTemperature !== null ? ` und eine Meerestemperatur von ${seaTemperature} Grad` : ''}.`;
+        else if (language === 'zh') script += ` 海洋状况方面，浪高为 ${waveHeight} 米${wavePeriod !== null ? `，周期为 ${wavePeriod} 秒` : ''}${seaTemperature !== null ? `，海水温度为 ${seaTemperature} 度` : ''}。`;
+        else if (language === 'ja') script += ` 海洋状況は、波の高さが${waveHeight}メートル${wavePeriod !== null ? `、周期が${wavePeriod}秒` : ''}${seaTemperature !== null ? `、海水温が${seaTemperature}度` : ''}です。`;
+        else if (language === 'ko') script += ` 해양 상태는 파고 ${waveHeight}미터${wavePeriod !== null ? `, 주기 ${wavePeriod}초` : ''}${seaTemperature !== null ? `, 해수 온도 ${seaTemperature}도` : ''}입니다.`;
+        else if (language === 'pt') script += ` Nas condições marítimas, as ondas têm ${waveHeight} metros${wavePeriod !== null ? `, com período de ${wavePeriod} segundos` : ''}${seaTemperature !== null ? `, e a temperatura do mar é de ${seaTemperature} graus` : ''}.`;
+        else if (language === 'it') script += ` Per le condizioni marine, le onde sono alte ${waveHeight} metri${wavePeriod !== null ? `, con un periodo di ${wavePeriod} secondi` : ''}${seaTemperature !== null ? `, e la temperatura del mare è di ${seaTemperature} gradi` : ''}.`;
+        else script += ` For marine conditions, wave height is ${waveHeight} meters${wavePeriod !== null ? `, with a period of ${wavePeriod} seconds` : ''}${seaTemperature !== null ? `, and sea temperature is ${seaTemperature} degrees` : ''}.`;
+      }
       
       if (language === 'zh') script += ` 祝您度过美好的一天！`;
       else if (language === 'de') script += ` Haben Sie einen absolut fantastischen Tag!`;
@@ -399,6 +448,25 @@ export function WeatherForecaster({ locationName, temperature, description, feel
       else if (language === 'pt') script += ` Tenha um dia absolutamente fantástico!`;
       else if (language === 'hi') script += ` आपका दिन बहुत शानदार हो!`;
       else script += ` Have an absolutely fantastic day ahead!`;
+
+      const nativeLangMap: Record<string, string> = {
+        en: 'en-US', es: 'es-ES', fr: 'fr-FR', ja: 'ja-JP', zh: 'zh-CN', de: 'de-DE',
+        ko: 'ko-KR', ru: 'ru-RU', ar: 'ar-SA', it: 'it-IT', pt: 'pt-BR', hi: 'hi-IN'
+      };
+      if (isNativeMobile) {
+        try {
+          if (requestVersion === speechRequestVersion) updateGlobalState(true);
+          await NativeSpeech.speak({ text: script, language: nativeLangMap[language] || 'en-US', rate: 1.05, pitch: 1.1 });
+          if (requestVersion === speechRequestVersion) updateGlobalState(false);
+          return;
+        } catch (error) {
+          if (requestVersion === speechRequestVersion) updateGlobalState(false);
+          // Some Android TTS engines do not have every selected language installed.
+          // Fall through to Web Speech when available instead of making the forecaster silent.
+          console.warn('Native forecast speech unavailable for selected language; using browser speech.', error);
+        }
+      }
+      if (!speechAPI) { updateGlobalState(false); return; }
 
       globalUtterance = new SpeechSynthesisUtterance(script);
       globalUtterance.rate = 1.15;
@@ -415,56 +483,24 @@ export function WeatherForecaster({ locationName, temperature, description, feel
       const utteranceLang = langMap[language] || 'en-US';
       globalUtterance.lang = utteranceLang;
 
-      const normalizedLang = utteranceLang.toLowerCase().split('-')[0];
-      const femaleVoicePriority: Record<string, string[]> = {
-        en: ['zira', 'jenny', 'aria', 'ava', 'emma', 'samantha', 'victoria', 'hazel', 'susan', 'female'],
-        es: ['elvira', 'dalia', 'helena', 'laura', 'paulina', 'sabina', 'female'],
-        fr: ['denise', 'hortense', 'amelie', 'julie', 'female'],
-        de: ['katja', 'hedda', 'vicki', 'female'],
-        it: ['elsa', 'isabella', 'female'],
-        pt: ['francisca', 'luciana', 'maria', 'female'],
-        ja: ['haruka', 'ayumi', 'sayaka', 'nanami', 'female'],
-        zh: ['xiaoxiao', 'xiaoyi', 'huihui', 'yaoyao', 'female'],
-        ko: ['heami', 'sunhi', 'yuna', 'female'],
-        ru: ['svetlana', 'irina', 'female'],
-        ar: ['salma', 'hoda', 'female'],
-        hi: ['swara', 'kalpana', 'heera', 'female']
-      };
-      const priorities = femaleVoicePriority[normalizedLang] || femaleVoicePriority.en;
-      let preferredVoice: SpeechSynthesisVoice | undefined;
-
-      // Respect the explicit preference order instead of whichever voice the browser lists first.
-      for (const preferredName of priorities) {
-        preferredVoice = voices.find(voice => {
-          const voiceLang = voice.lang.replace('_', '-').toLowerCase();
-          return voiceLang.startsWith(normalizedLang) && voice.name.toLowerCase().includes(preferredName);
-        });
-        if (preferredVoice) break;
-      }
-      // Some browser voices do not expose gender in their names. If a named female
-      // voice is unavailable, keep the requested language working with the best
-      // matching voice. If the voice list is still loading, Edge chooses from `lang`.
-      if (!preferredVoice) {
-        preferredVoice = voices.find(voice =>
-          voice.lang.replace('_', '-').toLowerCase().startsWith(normalizedLang)
-        );
-      }
+      const preferredVoice = selectForecastVoice(voices, utteranceLang);
       if (preferredVoice) globalUtterance.voice = preferredVoice;
 
-      globalUtterance.onstart = () => updateGlobalState(true);
-      globalUtterance.onend = () => updateGlobalState(false);
+      globalUtterance.onstart = () => { if (requestVersion === speechRequestVersion) updateGlobalState(true); };
+      globalUtterance.onend = () => { if (requestVersion === speechRequestVersion) updateGlobalState(false); };
       let retriedWithNativeVoice = false;
       globalUtterance.onerror = (event) => {
-        if (!retriedWithNativeVoice && event.error !== 'canceled' && event.error !== 'interrupted') {
+        if (requestVersion !== speechRequestVersion) return;
+        if (!retriedWithNativeVoice && !['canceled', 'interrupted', 'not-allowed'].includes(event.error)) {
           retriedWithNativeVoice = true;
           const nativeRetry = new SpeechSynthesisUtterance(script);
           nativeRetry.lang = utteranceLang;
           nativeRetry.rate = 1.05;
           nativeRetry.pitch = 1.1;
           nativeRetry.volume = 1.0;
-          nativeRetry.onstart = () => updateGlobalState(true);
-          nativeRetry.onend = () => updateGlobalState(false);
-          nativeRetry.onerror = () => updateGlobalState(false);
+          nativeRetry.onstart = () => { if (requestVersion === speechRequestVersion) updateGlobalState(true); };
+          nativeRetry.onend = () => { if (requestVersion === speechRequestVersion) updateGlobalState(false); };
+          nativeRetry.onerror = () => { if (requestVersion === speechRequestVersion) updateGlobalState(false); };
           globalUtterance = nativeRetry;
           window.setTimeout(() => {
             if (requestVersion === speechRequestVersion) speechAPI.speak(nativeRetry);
@@ -498,13 +534,13 @@ export function WeatherForecaster({ locationName, temperature, description, feel
       <button id="weather-forecaster-btn" 
         onClick={handleTouch}
         className={`z-20 p-1.5 sm:p-2 rounded-full backdrop-blur transition-all duration-300 shadow-md ${isPlaying ? 'bg-indigo-600 text-white animate-pulse' : 'bg-sky-200/80 dark:bg-slate-800/80 text-indigo-600 dark:text-indigo-400 hover:bg-sky-300 dark:hover:bg-slate-700 border border-sky-300/50 dark:border-slate-700/50'}`}
-        title="Click to forecast weather"
-        aria-label="Click to forecast weather"
+        title={FORECASTER_LABELS[language] || FORECASTER_LABELS.en}
+        aria-label={FORECASTER_LABELS[language] || FORECASTER_LABELS.en}
       >
         {isPlaying ? <Square size={16} className="fill-current" /> : <Podcast size={16} />}
       </button>
       <span className={`forecaster-tooltip pointer-events-none absolute right-0 top-full z-[100] mt-2 w-max max-w-[180px] rounded-md bg-slate-900 px-2 py-1 text-[10px] font-medium !text-white shadow-lg transition-opacity ${showHint ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}>
-        Click to forecast weather
+        {FORECASTER_LABELS[language] || FORECASTER_LABELS.en}
       </span>
     </div>
   );

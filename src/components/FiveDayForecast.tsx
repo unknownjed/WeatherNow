@@ -12,21 +12,28 @@ export function FiveDayForecast({ data, settings }: { data: any; settings: any }
     date: new Date(t),
     maxTemp: data.temperature_2m_max[i],
     minTemp: data.temperature_2m_min[i],
-    code: data.weather_code[i]
+    code: data.weather_code[i],
+    description: data.weather_description?.[i],
+    precip: data.precipitation_probability_max?.[i]
   }));
 
   return (
     <div className="grid grid-cols-5 h-full gap-2 pt-2 items-stretch w-full">
       {days.map((day: any, i: number) => (
-        <div key={i} className="forecast-period-tile flex flex-col items-center justify-between bg-white dark:bg-slate-950/40 rounded-lg p-2 sm:p-3 border border-sky-200 dark:border-slate-800 hover:border-indigo-500/30 transition-colors w-full h-full">
-          <div className="text-[10px] sm:text-xs font-bold text-sky-800 dark:text-slate-400 uppercase tracking-wider">
+        <div key={i} title={day.description} className="forecast-period-tile flex flex-col items-center justify-between bg-white dark:bg-slate-950/40 rounded-lg p-2 sm:p-3 border border-sky-200 dark:border-slate-800 hover:border-indigo-500/30 transition-colors w-full h-full">
+          <div data-weather-accent="forecast-day" className="forecast-day-label text-[10px] sm:text-xs font-bold text-blue-600 dark:text-slate-400 uppercase tracking-wider">
             {i === 0 ? t('today') : format(day.date, 'EEE', { locale: getDateLocale(settings?.language || 'en') })}
           </div>
           <div className="flex-1 flex items-center justify-center my-1 w-full min-h-[32px]">
             <WeatherIcon code={day.code} className="w-8 h-8 sm:w-9 sm:h-9" />
           </div>
-          <div className="flex flex-col items-center justify-end">
-            <span className="text-sm sm:text-base font-medium text-sky-950 dark:text-slate-200 font-mono leading-none">{Math.round(day.maxTemp)}°</span>
+          <div className="flex flex-col items-center justify-end gap-0.5">
+            <span className="text-sm sm:text-base font-medium text-sky-950 dark:text-slate-200 font-mono leading-none">
+              {Math.round(day.maxTemp)}{String.fromCharCode(176)}{settings?.tempUnit === 'fahrenheit' ? 'F' : 'C'}
+            </span>
+            {Number.isFinite(day.precip) && (
+              <span className="text-[9px] sm:text-[10px] font-mono leading-none text-blue-500 dark:text-blue-400">{Math.round(day.precip)}%</span>
+            )}
           </div>
         </div>
       ))}

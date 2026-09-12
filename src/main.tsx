@@ -2,21 +2,32 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import { warmForecastVoices } from './lib/forecastSpeech';
 
-// Purge any stale service worker caches on startup to guarantee instant UI updates
+// Start voice discovery while weather data loads, not after the first tap.
+warmForecastVoices();
+
+// Never let an older installed PWA cache mask source changes while the dashboard
+// is being served by Vite (`npm run dev`), including through Tailscale Funnel.
+// Production builds keep their normal auto-updating service worker behavior.
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then((registrations) => {
-    for (const registration of registrations) {
-      registration.update();
-    }
-  });
-  if (typeof caches !== 'undefined') {
-    caches.keys().then((names) => {
-      for (const name of names) {
-        if (name.startsWith('weathernow-v1') || name.startsWith('weathernow-v2')) {
-          caches.delete(name);
-        }
+  if (import.meta.env.DEV) {
+    void navigator.serviceWorker.getRegistrations().then(async (registrations) => {
+      await Promise.all(registrations.map((registration) => registration.unregister()));
+      if (typeof caches !== 'undefined') {
+        const names = await caches.keys();
+        await Promise.all(names.map((name) => caches.delete(name)));
       }
+    });
+  } else {
+    let reloadingForUpdate = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloadingForUpdate) return;
+      reloadingForUpdate = true;
+      window.location.reload();
+    });
+    void navigator.serviceWorker.getRegistrations().then((registrations) => {
+      for (const registration of registrations) void registration.update();
     });
   }
 }

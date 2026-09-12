@@ -54,6 +54,15 @@ html, body, #root { width: 100%; max-width: 100%; overflow-x: hidden !important;
   background-color: #ffffff !important;
 }
 
+/* Environmental cards use the same white inner-tile treatment as forecasts. */
+:root:not(.dark) #root .environmental-panels .rounded-lg.bg-white {
+  background-color: #ffffff !important;
+}
+
+:root:not(.dark) #root .current-weather-detail-tile {
+  background-color: #ffffff !important;
+}
+
 :root:not(.dark) #root .forecast-temperature-chart {
   --forecast-chart-label: #1e293b;
   --forecast-chart-grid: #64748b;
@@ -62,6 +71,26 @@ html, body, #root { width: 100%; max-width: 100%; overflow-x: hidden !important;
 :root.dark #root .forecast-temperature-chart {
   --forecast-chart-label: #64748b;
   --forecast-chart-grid: #334155;
+}
+
+/* Recharts makes its SVG/wrapper focusable after a pointer press. Suppress that
+   browser focus rectangle while leaving the temperature tooltip functional. */
+#root .forecast-temperature-chart,
+#root .forecast-temperature-chart:focus,
+#root .forecast-temperature-chart:focus-visible,
+#root .forecast-temperature-chart .recharts-wrapper,
+#root .forecast-temperature-chart .recharts-wrapper:focus,
+#root .forecast-temperature-chart .recharts-wrapper:focus-visible,
+#root .forecast-temperature-chart .recharts-surface,
+#root .forecast-temperature-chart .recharts-surface:focus,
+#root .forecast-temperature-chart .recharts-surface:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#root .forecast-temperature-chart .recharts-tooltip-cursor {
+  display: none !important;
 }
 
 /* Segmented toggle tracks use a clean white surface in light mode. */
@@ -84,6 +113,93 @@ html, body, #root { width: 100%; max-width: 100%; overflow-x: hidden !important;
   background-color: #a7afb6 !important;
   background-image: none !important;
   border-color: #bae6fd !important;
+}
+
+/* Calendar surfaces are intentionally independent from the dashboard frame. */
+.google-calendar-panel {
+  background: #ffffff;
+  color: #0f172a;
+  direction: ltr;
+}
+.google-calendar-panel .fc {
+  height: 100%;
+  background: #ffffff;
+  color: #0f172a;
+}
+.google-calendar-panel .fc-header-toolbar {
+  margin: 0 !important;
+  padding: 0.75rem 1rem;
+}
+.google-calendar-panel .fc-toolbar-title {
+  margin: 0;
+  padding: 0 0.5rem;
+  font-weight: 800;
+}
+.google-calendar-panel .fc-toolbar-chunk {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.google-calendar-panel .weathernow-selected-day {
+  box-shadow: inset 0 0 0 2px #3b82f6;
+  background: rgba(59, 130, 246, 0.08);
+}
+html.dark .google-calendar-panel .weathernow-selected-day {
+  box-shadow: inset 0 0 0 2px #60a5fa;
+  background: rgba(96, 165, 250, 0.12);
+}
+.google-calendar-panel .fc-button {
+  background: #a7afb6;
+  border-color: #8f989f;
+  color: #0f172a;
+  text-transform: uppercase;
+  box-shadow: none;
+}
+.google-calendar-panel .fc-button:hover,
+.google-calendar-panel .fc-button:focus {
+  background: #b8bec4;
+  border-color: #7f8a93;
+  color: #0f172a;
+}
+.google-calendar-panel .fc-button-primary:not(:disabled).fc-button-active,
+.google-calendar-panel .fc-button-primary:not(:disabled):active {
+  background: #a7afb6;
+  border-color: #7f8a93;
+  color: #0f172a;
+}
+.google-calendar-panel .fc-today-button {
+  background: #a7afb6;
+  border-color: #8f989f;
+  color: #0f172a;
+  text-transform: uppercase;
+}
+html.dark .google-calendar-panel,
+html.dark .google-calendar-panel .fc {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+html.dark .google-calendar-panel .fc-button {
+  background: #0f172a;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+html.dark .google-calendar-panel .fc-button:hover,
+html.dark .google-calendar-panel .fc-button:focus,
+html.dark .google-calendar-panel .fc-button-primary:not(:disabled).fc-button-active,
+html.dark .google-calendar-panel .fc-button-primary:not(:disabled):active {
+  background: #1e293b;
+  border-color: #475569;
+  color: #f8fafc;
+}
+html.dark .google-calendar-panel .fc-today-button {
+  background: #0f172a;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+html.dark .google-calendar-panel .fc-theme-standard td,
+html.dark .google-calendar-panel .fc-theme-standard th,
+html.dark .google-calendar-panel .fc-theme-standard .fc-scrollgrid {
+  border-color: #475569;
 }
 
 .news-item-card,
@@ -217,3 +333,507 @@ html.dark .settings-panel button[class*="bg-indigo-600"]:hover { background-colo
 :root:not(.dark) #root .settings-panel button:not([class*="bg-blue-"]):not([class*="bg-indigo-"]) * {
   color: #000000 !important;
 }
+
+/* Keep environmental inner tiles consistent with the dashboard forecast tiles. */
+.environmental-panels .rounded-lg.bg-white {
+  background-color: rgb(255 255 255 / 0.6);
+  border: 1px solid rgb(186 230 253 / 1);
+}
+
+.dark .environmental-panels .rounded-lg.bg-white {
+  background-color: rgb(2 6 23 / 0.4);
+  border-color: rgb(30 41 59 / 1);
+}
+
+.environmental-panels .air-metric-value {
+  font-size: 1.125rem !important;
+  line-height: 1.75rem !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-weight: 600;
+  white-space: nowrap;
+  display: inline-block;
+}
+
+.environmental-panels .marine-metric-value {
+  font-size: 1.125rem !important;
+  line-height: 1.75rem !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-weight: 600;
+  white-space: nowrap;
+  display: inline-block;
+}
+
+.environmental-panels .metric-unit {
+  font-size: inherit !important;
+  line-height: inherit !important;
+  font-weight: inherit;
+  white-space: nowrap;
+}
+
+/* Match the typography used by the Current Weather detail tiles. */
+.environmental-panels .rounded-lg.bg-white > span:not(.metric-unit) {
+  font-size: 0.75rem !important;
+  line-height: 1rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em;
+}
+
+.environmental-panels .rounded-lg.bg-white > strong {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-weight: 600;
+}
+.environmental-panels .rounded-lg.bg-white { padding: 0.375rem; }
+
+/* Keep the music player as a floating lower-right overlay. It must never
+   participate in the dashboard grid, otherwise opening search can push it
+   above the dashboard or create an extra layout row. */
+.music-player-overlay {
+  position: fixed;
+  left: auto;
+  right: 12px;
+  bottom: 48px;
+  z-index: 30000;
+  width: min(calc(100vw - 24px), 360px);
+  pointer-events: none;
+}
+.music-player-overlay > * { pointer-events: auto; }
+.music-player-overlay-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(110%);
+}
+.music-player-overlay-hidden > * { pointer-events: none; }
+.music-nav-playing {
+  color: #3b82f6 !important;
+  border: 1px solid #3b82f6;
+  box-shadow: inset 0 0 0 1px #3b82f6;
+}
+.music-nav-playing svg {
+  color: #3b82f6 !important;
+  stroke: #3b82f6 !important;
+  filter: drop-shadow(0 0 2px #3b82f6);
+}
+
+
+/* Playback/speech navigation indicators. Keep the glow tight like the Music control. */
+.dashboard-nav-forecaster-speaking,
+.dashboard-nav-forecaster-speaking svg,
+.dashboard-nav-forecaster-speaking span {
+  color: #3b82f6 !important;
+  stroke: #3b82f6 !important;
+}
+.dashboard-nav-forecaster-speaking {
+  border: 1px solid #3b82f6 !important;
+  box-shadow: inset 0 0 0 1px #3b82f6 !important;
+}
+.dashboard-nav-forecaster-speaking svg { filter: drop-shadow(0 0 2px #3b82f6); }
+.dashboard-nav-forecaster-speaking span { text-shadow: 0 0 2px #3b82f6; }
+.music-nav-playing span {
+  color: #3b82f6 !important;
+  -webkit-text-fill-color: #3b82f6 !important;
+}
+/* Let the floating Music player own the vertical scroll on phones/tablets.
+   This prevents a short nested YouTube result scroller from being covered by
+   dashboard tiles and keeps every returned result reachable. */
+
+/* On devices that use the vertical navigation rail, anchor Music directly
+   beside that rail instead of over the dashboard's upper content. */
+@media (min-width: 768px) {
+  .music-player-overlay {
+    left: 68px;
+    right: auto;
+  }
+}
+
+@media (max-width: 1199px) {
+  .music-player-overlay {
+    top: auto;
+    right: 12px;
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    width: min(calc(100vw - 24px), 520px);
+    max-height: calc(100dvh - 92px - env(safe-area-inset-bottom, 0px));
+    overflow-x: visible;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    isolation: isolate;
+    z-index: 30000;
+  }
+  .music-player-overlay .youtube-search-results {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  /* Suggestions become part of the player flow on phones/tablets so they
+     cannot be clipped by the player's scroll viewport or another tile. */
+  .music-player-overlay .youtube-search-suggestions {
+    position: static !important;
+    margin-top: 0.25rem;
+    margin-bottom: 0;
+    max-height: none !important;
+    overflow: visible !important;
+    width: 100%;
+  }
+}
+
+@media (max-width: 767px) {
+  .music-player-overlay {
+    top: auto;
+    right: 12px;
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    width: min(calc(100vw - 24px), 420px);
+    max-height: calc(100dvh - 92px - env(safe-area-inset-bottom, 0px));
+  }
+  .mobile-bottom-nav { position: relative; z-index: 30001; height: calc(64px + env(safe-area-inset-bottom, 0px)); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .mobile-bottom-nav button { min-width: 0; min-height: 44px; touch-action: manipulation; }
+  .mobile-bottom-nav button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
+/* Give the desktop player a little more horizontal room without affecting the
+   dashboard grid because the player remains a fixed overlay. */
+@media (min-width: 1200px) {
+  .music-player-overlay { width: 420px; }
+}
+
+
+/* Current-position marker glow on every device. Keep this outside responsive
+   media queries so desktop and large tablets receive the same visible halo. */
+.leaflet-overlay-pane .current-location-marker {
+  filter: drop-shadow(0 0 4px rgba(16, 185, 129, .98)) drop-shadow(0 0 10px rgba(16, 185, 129, .78)) drop-shadow(0 0 18px rgba(16, 185, 129, .48)) !important;
+}
+
+/* One row on phones/tablets; the search input takes the remaining width. */
+@media (max-width: 1199px) {
+  /* Mobile/tablet playback indicator: keep the Music label glow tight to the glyphs. */
+  .music-nav-playing span {
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+    text-shadow: 0 0 2px #3b82f6;
+  }
+
+
+  .dashboard-header { display: flex; flex-wrap: nowrap; gap: 8px; height: auto; min-height: 64px; padding: 8px 12px; padding-top: max(8px, env(safe-area-inset-top, 0px)); }
+  .dashboard-header .header-controls,
+  .dashboard-header .header-actions { display: flex; flex-wrap: nowrap; gap: 8px; }
+  .dashboard-header .header-controls { flex: 1; min-width: 0; }
+  .dashboard-header .header-brand { flex: 0 1 auto; gap: 8px; max-width: 38%; }
+  .dashboard-header .header-brand > button { flex-shrink: 0; }
+  .dashboard-header .header-account { min-height: 36px; padding: 4px; gap: 4px; }
+  .dashboard-header .header-clock { margin: 0; }
+  .dashboard-header .header-clock > div:first-child { font-size: 9px; letter-spacing: .02em; }
+  .dashboard-header .header-clock > div:last-child { font-size: 12px; }
+  .dashboard-header .header-search { flex: 1; position: relative; left: auto; right: auto; width: auto; min-width: 72px; }
+  .dashboard-header .header-search > div:first-child { min-width: 0; }
+  .dashboard-header .header-search input { min-height: 40px; font-size: 16px; padding-left: 28px; padding-right: 6px; }
+  .dashboard-header .header-search svg { left: 8px; }
+  .dashboard-header .header-install button { min-height: 40px; max-width: 112px; padding: 6px 8px; font-size: 11px; }
+  .dashboard-header .header-install button svg { flex-shrink: 0; }
+  .dashboard-header .header-loading { position: absolute; top: 2px; right: 2px; }
+  .dashboard-header .header-city-results { left: auto; right: 0; width: min(384px, calc(100vw - 28px)); max-height: min(320px, 50dvh); }
+  .desktop-sidebar-nav > div { min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; touch-action: manipulation; }
+  .google-calendar-panel .fc-header-toolbar { flex-wrap: nowrap; gap: 8px; padding: 12px 16px; }
+  .google-calendar-panel .fc-toolbar-title { font-size: clamp(14px, 2vw, 18px); line-height: 1.3; white-space: nowrap; padding: 0 .25rem; font-weight: 800; }
+  .google-calendar-panel .fc-toolbar-chunk { gap: 4px; min-width: 0; }
+  .google-calendar-panel .fc-toolbar-chunk:last-child { flex-shrink: 0; }
+  .google-calendar-panel .fc-button { font-size: 11px; min-height: 32px; padding: 4px 7px; }
+  .google-calendar-panel .fc-button .fc-icon { font-size: 16px; }
+  .google-calendar-panel .fc-toolbar-chunk > :not(:first-child) { margin-left: 4px; }
+}
+@media (max-width: 767px) {
+  .dashboard-header { gap: 6px; padding-left: 10px; padding-right: 10px; }
+  .dashboard-header .header-brand { flex: none; }
+  .dashboard-header .header-brand > div { display: none; }
+  .dashboard-header .header-brand img { width: 32px !important; height: 32px !important; }
+  .dashboard-header .header-controls, .dashboard-header .header-actions { gap: 6px; }
+  .dashboard-header .header-search { position: static; }
+  .dashboard-header .header-city-results { left: 10px; right: 10px; top: 100%; width: auto; }
+}
+@media (max-width: 479px) {
+  .dashboard-header .header-install button { width: 36px; justify-content: center; padding: 6px; }
+  .dashboard-header .header-install button span { display: none; }
+  .dashboard-header .header-clock > div:first-child { font-size: 8px; }
+  .dashboard-header .header-clock > div:last-child { font-size: 11px; }
+  .google-calendar-panel .fc-header-toolbar { gap: 6px; padding: 10px 14px; }
+  .google-calendar-panel .fc-toolbar-title { font-size: 14px; }
+  .google-calendar-panel .fc-button { font-size: 10px; padding: 4px 6px; }
+}
+
+.google-calendar-panel .fc-view-harness { touch-action: pan-y pinch-zoom; }
+
+html.dark #root .music-nav-playing,
+html.dark #root .music-nav-playing svg {
+  color: #3b82f6 !important;
+  stroke: #3b82f6 !important;
+}
+
+/* MP3 playlist and seek bar; the thumb advances with actual audio time. */
+.mp3-track-list { max-height: 94px; overflow-y: scroll; scrollbar-gutter: stable; border: 1px solid #bfdbfe; border-radius: .375rem; background: #eff6ff; }
+.mp3-track-row { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: .5rem; padding: .3rem .55rem; text-align: left; font-size: 10px; color: #1e3a8a; }
+.mp3-track-row:hover, .mp3-track-row-active { background: #dbeafe; color: #1d4ed8; }
+html.dark .mp3-track-list { border-color: #334155; background: #1e293b; }
+html.dark .mp3-track-row { color: #bfdbfe; }
+html.dark .mp3-track-row:hover, html.dark .mp3-track-row-active { background: #334155; color: #93c5fd; }
+.mp3-seek-control { display: block; width: 100%; padding: 0 .35rem; }
+.mp3-seek-control input { display: block; width: 100%; height: 15px; cursor: pointer; accent-color: #2563eb; }
+.mp3-seek-control input:disabled { cursor: default; opacity: .5; }
+.mp3-equalizer { --equalizer-color: #374151; display: grid; grid-template-columns: repeat(28, minmax(0, 1fr)); align-items: end; gap: 3px; height: 24px; margin: 0 .35rem; overflow: hidden; }
+.mp3-equalizer > span { display: block; height: 4px; border-radius: 1px; opacity: .45; background: repeating-linear-gradient(to top, var(--equalizer-color) 0 4px, transparent 4px 6px); }
+.mp3-equalizer[data-playing="true"] > span { opacity: 1; }
+html.dark .mp3-equalizer { --equalizer-color: #60a5fa; }
+
+/* Pulse only the cyclone's halo, keeping its position and symbol readable. */
+.cyclone-map-icon > svg {
+  display: block;
+  overflow: visible;
+  animation: cyclone-marker-glow 1.6s ease-in-out infinite;
+}
+
+@keyframes cyclone-marker-glow {
+  0%, 100% { filter: drop-shadow(0 0 0 transparent); }
+  50% { filter: drop-shadow(0 0 3px #ef4444) drop-shadow(0 0 7px #ef4444); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cyclone-map-icon > svg {
+    /* Keep the requested blinking signal, but slow it down. */
+    animation-duration: 4s;
+  }
+}
+
+/* Calendar month: always show the complete month grid without an internal scroller. */
+.calendar-month-tile {
+  height: auto;
+  aspect-ratio: auto;
+}
+.google-calendar-panel,
+.google-calendar-panel .fc,
+.google-calendar-panel .fc-view-harness,
+.google-calendar-panel .fc-view-harness-active,
+.google-calendar-panel .fc-scroller-harness,
+.google-calendar-panel .fc-scroller {
+  height: auto !important;
+  max-height: none !important;
+}
+.google-calendar-panel .fc-scroller {
+  overflow: visible !important;
+}
+
+.google-calendar-panel .calendar-marker-compact .fc-event-title,
+.google-calendar-panel .calendar-marker-compact .fc-event-main {
+  font-size: 8px !important;
+  line-height: 1.05 !important;
+}
+@media (min-width: 768px) {
+  .google-calendar-panel .calendar-marker-compact .fc-event-title,
+  .google-calendar-panel .calendar-marker-compact .fc-event-main { font-size: 9px !important; }
+}
+
+
+/* Weather Alert: readable panel with a tight, steady edge glow in both themes. */
+.weather-alert-tile {
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.38), 0 0 5px rgba(239, 68, 68, 0.52);
+}
+html.dark .weather-alert-tile {
+  box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.32), 0 0 5px rgba(248, 113, 113, 0.48);
+}
+
+
+/* Authoritative light-mode accent labels. Keep these after the global light typography rule. */
+:root:not(.dark) #root .forecast-day-label,
+:root:not(.dark) #root .forecast-hour-label,
+:root:not(.dark) #root .env-metric-label {
+  color: #2563eb !important;
+  -webkit-text-fill-color: #2563eb !important;
+}
+
+/* Preserve the existing dark-mode label colors. */
+html.dark #root .forecast-day-label,
+html.dark #root .forecast-hour-label,
+html.dark #root .env-metric-label {
+  -webkit-text-fill-color: currentColor;
+}
+
+/* Settings controls: match the Sign Out / Install App pointer feedback.
+   Desktop hover uses an inset-only glow; touch/click keeps a short pressed state. */
+.settings-panel button {
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease,
+    opacity 150ms ease;
+}
+
+/* Desktop / mouse: glow INSIDE the button in light mode. */
+@media (hover: hover) and (pointer: fine) {
+  :root:not(.dark) #root .settings-panel button:not([data-settings-disclosure]):not(:disabled):hover {
+    box-shadow:
+      inset 0 0 0 2px rgba(107, 114, 128, 1),
+      inset 0 0 10px rgba(156, 163, 175, 0.98),
+      inset 0 0 22px rgba(209, 213, 219, 0.86),
+      inset 0 0 34px rgba(229, 231, 235, 0.58) !important;
+  }
+
+  /* Desktop / mouse: same inset glow in dark mode. */
+  html.dark #root .settings-panel button:not([data-settings-disclosure]):not(:disabled):hover {
+    box-shadow:
+      inset 0 0 0 2px rgba(96, 165, 250, 1),
+      inset 0 0 10px rgba(96, 165, 250, 0.98),
+      inset 0 0 22px rgba(59, 130, 246, 0.86),
+      inset 0 0 34px rgba(129, 140, 248, 0.52) !important;
+  }
+}
+
+/* Keep click/touch feedback inside the button too—no outer halo. */
+#root .settings-panel button:not([data-settings-disclosure]):not(:disabled):active {
+  transform: scale(0.97);
+  box-shadow:
+    inset 0 0 0 2px rgba(59, 130, 246, 0.86),
+    inset 0 0 10px rgba(59, 130, 246, 0.82),
+    inset 0 0 18px rgba(99, 102, 241, 0.48) !important;
+}
+
+:root:not(.dark) #root .settings-panel button:not([data-settings-disclosure]):not(:disabled):active {
+  box-shadow:
+    inset 0 0 0 2px rgba(107, 114, 128, 1),
+    inset 0 0 10px rgba(156, 163, 175, 0.95),
+    inset 0 0 18px rgba(209, 213, 219, 0.72) !important;
+}
+
+html.dark #root .settings-panel button:not([data-settings-disclosure]):not(:disabled):active {
+  box-shadow:
+    inset 0 0 0 2px rgba(96, 165, 250, 0.92),
+    inset 0 0 10px rgba(96, 165, 250, 0.86),
+    inset 0 0 18px rgba(59, 130, 246, 0.56) !important;
+}
+
+@media (hover: none), (pointer: coarse) {
+  #root .settings-panel button:not([data-settings-disclosure]):not(:disabled):active {
+    transform: scale(0.965);
+  }
+}
+
+/* DARK MODE only: active speech/music icon colors.
+   Keep navigation text white; change only the active icons to blue. */
+html.dark #root .dashboard-nav-forecaster-speaking > svg,
+html.dark #root .dashboard-nav-forecaster-speaking > svg *,
+html.dark #root .music-nav-playing > svg,
+html.dark #root .music-nav-playing > svg * {
+  color: #3b82f6 !important;
+  stroke: #3b82f6 !important;
+}
+
+/* Keep the Dashboard/Music labels white in dark mode. */
+html.dark #root .dashboard-nav-forecaster-speaking > span,
+html.dark #root .music-nav-playing > span {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Dark mode active navigation icons.
+   These selectors intentionally outrank the existing mobile dark-mode rule
+   that forces all nav SVGs/paths to white. Text remains white. */
+html.dark body #root nav.mobile-bottom-nav button.dashboard-nav-forecaster-speaking > svg,
+html.dark body #root nav.mobile-bottom-nav button.dashboard-nav-forecaster-speaking > svg *,
+html.dark body #root nav.mobile-bottom-nav button.music-nav-playing > svg,
+html.dark body #root nav.mobile-bottom-nav button.music-nav-playing > svg * {
+  color: #3b82f6 !important;
+  stroke: #3b82f6 !important;
+}
+
+html.dark body #root nav.mobile-bottom-nav button.dashboard-nav-forecaster-speaking > span,
+html.dark body #root nav.mobile-bottom-nav button.music-nav-playing > span {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Desktop/tablet side navigation uses the same active icon behavior in dark mode. */
+html.dark body #root .desktop-sidebar-nav .dashboard-nav-forecaster-speaking > svg,
+html.dark body #root .desktop-sidebar-nav .dashboard-nav-forecaster-speaking > svg *,
+html.dark body #root .desktop-sidebar-nav .music-nav-playing > svg,
+html.dark body #root .desktop-sidebar-nav .music-nav-playing > svg * {
+  color: #3b82f6 !important;
+  stroke: #3b82f6 !important;
+}
+
+
+/* Dark mode only — current App.tsx wraps active nav icons in .nav-active-icon-box.
+   Target that wrapper directly so the existing white !important nav rules cannot win.
+   Labels remain white. */
+html.dark body #root nav.mobile-bottom-nav button.dashboard-nav-forecaster-speaking > .nav-active-icon-box,
+html.dark body #root nav.mobile-bottom-nav button.dashboard-nav-forecaster-speaking > .nav-active-icon-box svg,
+html.dark body #root nav.mobile-bottom-nav button.dashboard-nav-forecaster-speaking > .nav-active-icon-box svg *,
+html.dark body #root nav.mobile-bottom-nav button.music-nav-playing > .nav-active-icon-box,
+html.dark body #root nav.mobile-bottom-nav button.music-nav-playing > .nav-active-icon-box svg,
+html.dark body #root nav.mobile-bottom-nav button.music-nav-playing > .nav-active-icon-box svg *,
+html.dark body #root .desktop-sidebar-nav .dashboard-nav-forecaster-speaking > .nav-active-icon-box,
+html.dark body #root .desktop-sidebar-nav .dashboard-nav-forecaster-speaking > .nav-active-icon-box svg,
+html.dark body #root .desktop-sidebar-nav .dashboard-nav-forecaster-speaking > .nav-active-icon-box svg *,
+html.dark body #root .desktop-sidebar-nav .music-nav-playing > .nav-active-icon-box,
+html.dark body #root .desktop-sidebar-nav .music-nav-playing > .nav-active-icon-box svg,
+html.dark body #root .desktop-sidebar-nav .music-nav-playing > .nav-active-icon-box svg * {
+  color: #3b82f6 !important;
+  stroke: #3b82f6 !important;
+}
+
+/* Keep only the actual navigation labels white in dark mode. */
+html.dark body #root nav.mobile-bottom-nav button.dashboard-nav-forecaster-speaking > span:not(.nav-active-icon-box),
+html.dark body #root nav.mobile-bottom-nav button.music-nav-playing > span:not(.nav-active-icon-box) {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Current Weather C/F unit: blue in light mode only.
+   This must use !important because the global light-theme typography rule
+   forces most spans to black with !important. */
+:root:not(.dark) #root .current-weather-unit {
+  color: #2563eb !important;
+  -webkit-text-fill-color: #2563eb !important;
+}
+
+:root:not(.dark) #root .current-weather-degree {
+  color: #2563eb !important;
+  -webkit-text-fill-color: #2563eb !important;
+}
+
+/* Desktop dashboard default view: 90%.
+   Applies only to the Dashboard tab at desktop width; tablet/mobile and other tabs are unchanged. */
+@media (min-width: 1200px) {
+  .desktop-dashboard-view {
+    zoom: 0.9;
+    width: 111.111111%;
+  }
+}
+
+/* Calendar tab desktop fit:
+   The Calendar column is already stretched by App.tsx. Override the older
+   calendar-month-tile auto-height rule so the tile actually fills that
+   available inner tab height, matching the Journal tile. */
+@media (min-width: 1280px) {
+  .calendar-month-tile {
+    height: 100% !important;
+    max-height: 100% !important;
+  }
+}
+
+/* Dark mode only: the installed-app button keeps an emerald/green inset glow.
+   This overrides the generic blue Settings button hover/active glow only for
+   #settings-install-app-btn while it is in the installed (bg-emerald-600) state. */
+@media (hover: hover) and (pointer: fine) {
+  html.dark #root .settings-panel #settings-install-app-btn.bg-emerald-600:hover {
+    box-shadow:
+      inset 0 0 0 2px rgba(52, 211, 153, 1),
+      inset 0 0 10px rgba(52, 211, 153, 0.98),
+      inset 0 0 22px rgba(16, 185, 129, 0.86),
+      inset 0 0 34px rgba(5, 150, 105, 0.52) !important;
+  }
+}
+
+html.dark #root .settings-panel #settings-install-app-btn.bg-emerald-600:active {
+  box-shadow:
+    inset 0 0 0 2px rgba(52, 211, 153, 0.96),
+    inset 0 0 10px rgba(52, 211, 153, 0.90),
+    inset 0 0 18px rgba(16, 185, 129, 0.62) !important;
+}
+

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/icon-192x192.png">
+  <title>Install WeatherNow</title>
+  <meta name="theme-color" content="#0f172a">
+  <style>
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0f172a; color: #f8fafc; font: 16px/1.5 system-ui, sans-serif; }
+    main { max-width: 360px; padding: 28px; }
+    img { width: 64px; height: 64px; border-radius: 16px; }
+    h1 { font-size: 24px; }
+    p { color: #cbd5e1; }
+    button { padding: 12px 20px; border: 0; border-radius: 8px; background: #2563eb; color: white; font: inherit; cursor: pointer; }
+    button:disabled { opacity: 0.6; cursor: default; }
+    a { color: #93c5fd; }
+  </style>
+</head>
+<body>
+  <main>
+    <img src="/icon-192x192.png" alt="WeatherNow">
+    <h1>Install WeatherNow</h1>
+    <p>Your original dashboard stays open. Complete installation in this separate window.</p>
+    <button id="install" type="button" disabled>Preparing installation…</button>
+    <p id="status" role="status">Waiting for the browser’s install option.</p>
+    <a href="/">Continue to dashboard in this window</a>
+  </main>
+  <script>
+    const button = document.getElementById('install');
+    const status = document.getElementById('status');
+    const standalone = window.matchMedia('(display-mode: standalone)');
+    let installPrompt = null;
+    let installed = false;
+
+    function showInstalled() {
+      installed = true;
+      installPrompt = null;
+      try { localStorage.setItem('weathernow_app_installed', 'true'); } catch {}
+      button.disabled = true;
+      button.textContent = 'App Installed';
+      button.style.background = '#059669';
+      status.textContent = 'WeatherNow is installed. Your original dashboard has not been closed by this page.';
+      // Only this installation window may navigate after becoming the app.
+      if (standalone.matches || navigator.standalone) window.location.replace('/');
+    }
+
+    window.addEventListener('beforeinstallprompt', (event) => {
+      event.preventDefault();
+      installPrompt = event;
+      button.disabled = false;
+      button.textContent = 'Install App';
+      status.textContent = 'Click Install App here, then confirm in the browser prompt.';
+    });
+    window.addEventListener('appinstalled', showInstalled);
+    standalone.addEventListener('change', () => {
+      if (standalone.matches) showInstalled();
+    });
+    button.addEventListener('click', async () => {
+      if (!installPrompt || installed) return;
+      const prompt = installPrompt;
+      installPrompt = null;
+      button.disabled = true;
+      try {
+        await prompt.prompt();
+        const choice = await prompt.userChoice;
+        if (installed) return;
+        if (choice.outcome === 'accepted') {
+          status.textContent = 'Finishing installation…';
+        } else {
+          button.textContent = 'Install dismissed';
+          status.textContent = 'Installation was cancelled. Reload this window to try again; your dashboard remains open.';
+        }
+      } catch {
+        status.textContent = 'The browser could not start installation. Reload this window and try again.';
+      }
+    });
+    if (standalone.matches || navigator.standalone) showInstalled();
+    window.setTimeout(() => {
+      if (installPrompt || installed) return;
+      button.textContent = 'Install option unavailable';
+      status.textContent = window.isSecureContext
+        ? 'If no install button appears, use this window’s browser menu to install WeatherNow. On iPhone or iPad, use Share → Add to Home Screen.'
+        : 'Installation requires HTTPS, or localhost on this device. Open the secure WeatherNow address and try again.';
+    }, 8000);
+  </script>
+</body>
+</html>

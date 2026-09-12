@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { apiUrl } from '../lib/apiUrl';
 import { MapContainer, Marker, Polyline, Popup, useMap, useMapEvents, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -45,6 +46,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { AppSettings, searchPlaces, getRoute, PlaceSearchResult, Location } from '../lib/api';
+import { getMapUiLabels } from '../lib/uiLabels';
 
 setWorkerUrl(mapLibreWorkerUrl);
 
@@ -284,7 +286,15 @@ function generateFallbackCurve(
   ];
 }
 
+function greatCircleDistanceKm(originLat: number, originLng: number, destLat: number, destLng: number) {
+  const radians = (value: number) => value * Math.PI / 180;
+  const a = Math.sin(radians(destLat - originLat) / 2) ** 2
+    + Math.cos(radians(originLat)) * Math.cos(radians(destLat)) * Math.sin(radians(destLng - originLng) / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: GoogleNavigationMapProps) {
+  const ui = getMapUiLabels(settings?.language || 'en');
   const sameCountry = useCallback((place: PlaceSearchResult) => !currentLocation.country || place.country?.toLowerCase() === currentLocation.country.toLowerCase(), [currentLocation.country]);
   const mapRef = useRef<L.Map | null>(null);
   const vectorMapRef = useRef<MapLibreMap | null>(null);
@@ -307,7 +317,7 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
   const [originInput, setOriginInput] = useState('');
   const [destinationInput, setDestinationInput] = useState('');
 
-  // Collapse control panels when clicking away, while preserving any active route.
+  // Click-away dismisses search/layer menus, not the route planning panel.
   useEffect(() => {
     const handleClickAway = (event: PointerEvent) => {
       const target = event.target as Node;
@@ -316,7 +326,6 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
 
       if (!clickedNavigationControls) {
         setIsSearchOpen(false);
-        setIsDirectionsOpen(false);
         setOriginSuggestions([]);
         setDestSuggestions([]);
       }
@@ -394,22 +403,13 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
   useEffect(() => {
     setMapCenter([currentLocation.lat, currentLocation.lng]);
     const cleanName = currentLocation.name.split(',')[0].trim();
-    setOriginInput(`Your Location (${cleanName})`);
+    setOriginInput(`${ui.yourLocation} (${cleanName})`);
     setOriginCoords({
       lat: currentLocation.lat,
       lng: currentLocation.lng,
       name: currentLocation.name,
     });
-  }, [currentLocation.lat, currentLocation.lng, currentLocation.name]);
-
-  // Closing the directions panel must not clear the route from the map.
-  const handleCloseDirections = () => {
-    window.speechSynthesis?.cancel();
-    setIsDirectionsOpen(false);
-    setShowTurnSteps(false);
-    setDestSuggestions([]);
-    setOriginSuggestions([]);
-  };
+  }, [currentLocation.lat, currentLocation.lng, currentLocation.name, ui.yourLocation]);
 
   const clearRouteForDifferentPlace = useCallback((lat: number, lng: number) => {
     if (!destCoords || (Math.abs(destCoords.lat - lat) < 0.00001 && Math.abs(destCoords.lng - lng) < 0.00001)) return;
@@ -429,7 +429,7 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
 
   const handleNamedPoiClick = useCallback(async (lat: number, lng: number) => {
     try {
-      const response = await fetch(`/api/poi-at?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`);
+      const response = await fetch(apiUrl(`/api/poi-at?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`));
       if (!response.ok) return;
       const data = await response.json();
       const place = data.place as PlaceSearchResult | undefined;
@@ -465,6 +465,10 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
 
   // Destination autocomplete
   useEffect(() => {
+    if (destCoords) {
+      setDestSuggestions([]);
+      return;
+    }
     if (!destinationInput || destinationInput.trim().length < 2) {
       setDestSuggestions([]);
       return;
@@ -476,11 +480,11 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
       setIsSearchingDest(false);
     }, 280);
     return () => clearTimeout(timer);
-  }, [destinationInput, currentLocation.lat, currentLocation.lng, sameCountry]);
+  }, [destinationInput, destCoords, currentLocation.lat, currentLocation.lng, sameCountry]);
 
   // Origin autocomplete
   useEffect(() => {
-    if (!originInput || originInput.startsWith('Your Location') || originInput.trim().length < 2) {
+    if (!originInput || (originInput.startsWith(ui.yourLocation) || originInput.startsWith('Your Location')) || originInput.trim().length < 2) {
       setOriginSuggestions([]);
       return;
     }
@@ -505,7 +509,14 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
     ) => {
       setIsLoadingRoute(true);
       try {
-        const routeData = await getRoute(origLng, origLat, dstLng, dstLat);
+        const straightDistanceKm = greatCircleDistanceKm(origLat, origLng, dstLat, dstLng);
+        // Air travel is not a useful route for short local trips.
+        if (mode === 'FLIGHT' && straightDistanceKm < 100) {
+          setCalculatedRoutes([]);
+          setRouteBounds(null);
+          return;
+        }
+        const routeData = mode === 'FLIGHT' ? null : await getRoute(origLng, origLat, dstLng, dstLat, mode);
         
         if (routeData && routeData.routes && routeData.routes.length > 0) {
           const primary = routeData.routes[0];
@@ -581,7 +592,9 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
           setRouteBounds(leafPoints);
         } else {
           // Fallback interpolated curve
-          const fallbackPoints = generateFallbackCurve(origLat, origLng, dstLat, dstLng);
+          const fallbackPoints = mode === 'FLIGHT'
+            ? [[origLat, origLng], [dstLat, dstLng]] as [number, number][]
+            : generateFallbackCurve(origLat, origLng, dstLat, dstLng);
           const dLat = dstLat - origLat;
           const dLng = dstLng - origLng;
           const straightDistKm = Math.max(1.2, Number((Math.sqrt(dLat * dLat + dLng * dLng) * 111).toFixed(1)));
@@ -589,8 +602,8 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
 
           const fallbackRoute: RouteOption = {
             id: 'route-primary',
-            title: 'Direct route',
-            via: 'via Direct Connecting Road',
+            title: mode === 'FLIGHT' ? 'Direct flight path' : `${mode.charAt(0) + mode.slice(1).toLowerCase()} route`,
+            via: mode === 'FLIGHT' ? 'via great-circle air path' : 'via Direct Connecting Road',
             duration: `${durationMin} min`,
             durationMinutes: durationMin,
             distance: `${straightDistKm} km`,
@@ -635,7 +648,12 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
 
   // Voice narration for turn-by-turn navigation
   useEffect(() => {
-    if (!isNavigating || isVoiceMuted) {
+    // Do not cancel global speech when this map is merely mounted/switched to;
+    // the weather forecaster uses the same browser speech engine.
+    if (!isNavigating) {
+      return;
+    }
+    if (isVoiceMuted) {
       window.speechSynthesis?.cancel();
       return;
     }
@@ -735,7 +753,7 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
       e.preventDefault();
       if (originSuggestions.length > 0) {
         handleSelectOrigin(originSuggestions[0]);
-      } else if (originInput.trim().length >= 2 && !originInput.startsWith('Your Location')) {
+      } else if (originInput.trim().length >= 2 && !(originInput.startsWith(ui.yourLocation) || originInput.startsWith('Your Location'))) {
         setIsSearchingOrigin(true);
         const results = await searchPlaces(originInput.trim(), currentLocation.lat, currentLocation.lng);
         setIsSearchingOrigin(false);
@@ -816,11 +834,11 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
               <div className="flex items-center gap-0.5">
                 {(
                   [
-                    { mode: 'DRIVING', icon: Car, label: 'Driving' },
-                    { mode: 'TRANSIT', icon: Bus, label: 'Transit' },
-                    { mode: 'WALKING', icon: Footprints, label: 'Walk' },
-                    { mode: 'BICYCLING', icon: Bike, label: 'Cycling' },
-                    { mode: 'FLIGHT', icon: Plane, label: 'Flights' },
+                    { mode: 'DRIVING', icon: Car, label: ui.driving },
+                    { mode: 'TRANSIT', icon: Bus, label: ui.transit },
+                    { mode: 'WALKING', icon: Footprints, label: ui.walk },
+                    { mode: 'BICYCLING', icon: Bike, label: ui.cycling },
+                    { mode: 'FLIGHT', icon: Plane, label: ui.flights },
                   ] as const
                 ).map(({ mode, icon: Icon, label }) => (
                   <button
@@ -839,12 +857,22 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
               </div>
 
               <button
-                onClick={handleCloseDirections}
-                className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors"
-                title="Close directions"
+                type="button"
+                aria-label={ui.closeDirections}
+                title={ui.closeDirections}
+                onClick={() => {
+                  // Close only the directions card; keep the selected route
+                  // visible until the destination is changed or cleared.
+                  setIsDirectionsOpen(false);
+                  setShowTurnSteps(false);
+                  setOriginSuggestions([]);
+                  setDestSuggestions([]);
+                }}
+                className="p-1.5 rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-colors"
               >
-                <X size={16} />
+                <X size={15} />
               </button>
+
             </div>
 
             {/* Inputs: Origin (A) and Destination (B) */}
@@ -865,7 +893,7 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
                     value={originInput}
                     onChange={(e) => setOriginInput(e.target.value)}
                     onKeyDown={handleOriginKeyDown}
-                    placeholder="Choose starting point or place..."
+                    placeholder={ui.chooseStartingPoint}
                     className="w-full bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1.5 focus:ring-[#1a73e8]"
                   />
                   {/* Origin Suggestions Dropdown */}
@@ -879,8 +907,8 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
                         >
                           <span className="text-sm mt-0.5">{getPlaceCategoryIcon(place.category)}</span>
                           <div className="flex-1 min-w-0">
-                            <div className="font-semibold text-slate-800 dark:text-slate-200 truncate">{place.name}</div>
-                            <div className="text-[10px] text-slate-400 truncate">{place.subtitle || place.address}</div>
+                            <div className="font-semibold text-black dark:text-slate-200 truncate">{place.name}</div>
+                            <div className="text-[10px] text-black dark:text-slate-400 truncate">{place.subtitle || place.address}</div>
                           </div>
                         </button>
                       ))}
@@ -893,9 +921,24 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
                   <input
                     type="text"
                     value={destinationInput}
-                    onChange={(e) => setDestinationInput(e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setDestinationInput(value);
+                      if (destCoords && value.trim() !== destCoords.name.trim()) {
+                        setDestCoords(null);
+                        setCalculatedRoutes([]);
+                        setRouteBounds(null);
+                      }
+                      if (!value.trim()) {
+                        setDestCoords(null);
+                        setCalculatedRoutes([]);
+                        setRouteBounds(null);
+                        setShowTurnSteps(false);
+                        setSearchedPlace(null);
+                      }
+                    }}
                     onKeyDown={handleDestinationKeyDown}
-                    placeholder="Search place, mall, hotel, address..."
+                    placeholder={ui.searchDestination}
                     autoFocus
                     className="w-full bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1.5 focus:ring-[#1a73e8]"
                   />
@@ -910,8 +953,8 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
                         >
                           <span className="text-sm mt-0.5">{getPlaceCategoryIcon(place.category)}</span>
                           <div className="flex-1 min-w-0">
-                            <div className="font-semibold text-slate-800 dark:text-slate-200 truncate">{place.name}</div>
-                            <div className="text-[10px] text-slate-400 truncate">{place.subtitle || place.address}</div>
+                            <div className="font-semibold text-black dark:text-slate-200 truncate">{place.name}</div>
+                            <div className="text-[10px] text-black dark:text-slate-400 truncate">{place.subtitle || place.address}</div>
                           </div>
                         </button>
                       ))}
@@ -924,7 +967,7 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
               <button
                 onClick={handleSwapLocations}
                 className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors flex-shrink-0"
-                title="Reverse starting point and destination"
+                title={ui.reverseLocations}
               >
                 <RotateCw size={14} />
               </button>
@@ -934,7 +977,7 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
             {isLoadingRoute && (
               <div className="flex items-center justify-center gap-2 py-2 text-xs text-[#1a73e8] font-medium">
                 <Loader2 size={14} className="animate-spin" />
-                <span>Finding best real-time road route...</span>
+                <span>{ui.findingRoute}</span>
               </div>
             )}
 
@@ -963,7 +1006,7 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
                           </span>
                         </div>
                         <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                          Fastest
+                          {ui.fastest}
                         </span>
                       </div>
                       <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
@@ -984,6 +1027,12 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
                         setNavStepIdx(0);
                         setNavigationPosition(null);
                         setIsNavigating(true);
+                        // Hide planning controls only when navigation starts;
+                        // keep the selected route and its map geometry intact.
+                        setIsDirectionsOpen(false);
+                        setShowTurnSteps(false);
+                        setOriginSuggestions([]);
+                        setDestSuggestions([]);
                       }
                     }}
                     className={`flex-1 py-1.5 px-2.5 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 shadow-md transition-all ${
@@ -993,14 +1042,14 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
                     }`}
                   >
                     <Navigation size={13} className={isNavigating ? 'animate-pulse' : ''} />
-                    <span>{isNavigating ? 'Stop' : 'Start'}</span>
+                    <span>{isNavigating ? ui.stop : ui.start}</span>
                   </button>
 
                   <button
                     onClick={() => setShowTurnSteps(!showTurnSteps)}
                     className="py-1.5 px-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-full text-xs font-semibold transition-colors"
                   >
-                    {showTurnSteps ? 'Hide' : 'Steps'}
+                    {showTurnSteps ? ui.hide : ui.steps}
                   </button>
                 </div>
               </div>
@@ -1028,8 +1077,21 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search places, roads, landmarks..."
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setSearchQuery(value);
+                  if (!value.trim()) {
+                    window.speechSynthesis?.cancel();
+                    setSearchedPlace(null);
+                    setPinnedPlaces([]);
+                    setDestCoords(null);
+                    setCalculatedRoutes([]);
+                    setRouteBounds(null);
+                    setShowTurnSteps(false);
+                    setIsNavigating(false);
+                  }
+                }}
+                placeholder={ui.searchPlaces}
                 autoFocus
                 className="flex-1 min-w-0 bg-transparent text-xs font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none"
               />
@@ -1041,6 +1103,14 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
                   onClick={() => {
                     setSearchQuery('');
                     setSearchSuggestions([]);
+                    window.speechSynthesis?.cancel();
+                    setSearchedPlace(null);
+                    setPinnedPlaces([]);
+                    setDestCoords(null);
+                    setCalculatedRoutes([]);
+                    setRouteBounds(null);
+                    setShowTurnSteps(false);
+                    setIsNavigating(false);
                   }}
                   className="p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 flex-shrink-0"
                 >
@@ -1055,7 +1125,7 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
                   setIsSearchOpen(false);
                 }}
                 className="p-0.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-full transition-colors flex-shrink-0"
-                title="Collapse search"
+                title={ui.collapseSearch}
               >
                 <X size={14} />
               </button>
@@ -1065,12 +1135,12 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
             <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 max-w-[230px] xs:max-w-[260px] sm:max-w-[310px]">
               {(
                 [
-                  { label: 'Food', query: 'Restaurant' },
-                  { label: 'Coffee', query: 'Coffee shop' },
-                  { label: 'Gas', query: 'Gas station' },
-                  { label: 'Hotels', query: 'Hotel' },
-                  { label: 'Groceries', query: 'Supermarket' },
-                  { label: 'Pharmacy', query: 'Pharmacy' },
+                  { label: ui.food, query: 'Restaurant' },
+                  { label: ui.coffee, query: 'Coffee shop' },
+                  { label: ui.gas, query: 'Gas station' },
+                  { label: ui.hotels, query: 'Hotel' },
+                  { label: ui.groceries, query: 'Supermarket' },
+                  { label: ui.pharmacy, query: 'Pharmacy' },
                 ] as const
               ).map((chip) => (
                 <button
@@ -1101,8 +1171,8 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
                   >
                     <span className="text-base mt-0.5">{getPlaceCategoryIcon(place.category)}</span>
                     <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-slate-800 dark:text-slate-200 truncate">{place.name}</div>
-                      <div className="text-[10px] text-slate-400 truncate">{place.subtitle || place.address}</div>
+                      <div className="font-semibold text-black dark:text-slate-200 truncate">{place.name}</div>
+                      <div className="text-[10px] text-black dark:text-slate-400 truncate">{place.subtitle || place.address}</div>
                     </div>
                   </button>
                 ))}
@@ -1114,7 +1184,7 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setIsSearchOpen(true)}
-              title="Search Any Place or Landmark"
+              title={ui.searchAnyPlace}
               className="w-8 h-8 rounded-full bg-white/95 dark:bg-slate-900/95 text-slate-700 dark:text-slate-200 hover:text-[#1a73e8] shadow-[0_2px_6px_rgba(0,0,0,0.22)] hover:shadow-md border border-slate-200 dark:border-slate-700/80 backdrop-blur-md flex items-center justify-center transition-all hover:scale-105 active:scale-95"
             >
               <Search size={15} />
@@ -1128,7 +1198,7 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.25)] border border-slate-200 dark:border-slate-800 p-3 max-h-56 overflow-y-auto space-y-2 text-xs">
             <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-800">
               <span className="font-bold text-slate-800 dark:text-slate-200">
-                Turn-by-turn directions ({activeRoute.steps.length} steps)
+                {ui.turnByTurnDirections} ({activeRoute.steps.length} {ui.steps.toLowerCase()})
               </span>
               <button onClick={() => setShowTurnSteps(false)} className="text-slate-400 hover:text-slate-600">
                 <X size={15} />
@@ -1163,19 +1233,19 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
 
           <div className="flex-1 min-w-0">
             <div className="text-[10px] text-emerald-200 uppercase tracking-widest font-bold flex items-center gap-1.5">
-              <span>Step {navStepIdx + 1}/{activeRoute.steps.length}</span>
+              <span>{ui.step} {navStepIdx + 1}/{activeRoute.steps.length}</span>
               <span>•</span>
               <span className="bg-emerald-800/80 px-1.5 py-0.2 rounded font-mono text-[9px]">
                 {settings?.windUnit === 'mph' ? '32 mph' : '52 km/h'}
               </span>
             </div>
             <div className="text-[11px] sm:text-xs font-bold truncate text-white">
-              {activeRoute.steps[navStepIdx]?.instruction || 'Continue on route'}
+              {activeRoute.steps[navStepIdx]?.instruction || ui.continueOnRoute}
             </div>
             <div className="text-[10px] text-emerald-100 flex items-center gap-1.5 font-medium">
-              <span>In {activeRoute.steps[navStepIdx]?.distance}</span>
+              <span>{ui.inLabel} {activeRoute.steps[navStepIdx]?.distance}</span>
               <span>•</span>
-              <span>ETA {activeRoute.duration}</span>
+              <span>{ui.eta} {activeRoute.duration}</span>
             </div>
           </div>
 
@@ -1183,7 +1253,7 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
           <div className="flex items-center gap-1">
             <button
               onClick={() => setIsVoiceMuted(!isVoiceMuted)}
-              title={isVoiceMuted ? 'Unmute voice navigation' : 'Mute voice navigation'}
+              title={isVoiceMuted ? ui.unmuteVoice : ui.muteVoice}
               className="p-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors"
             >
               {isVoiceMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
@@ -1193,7 +1263,7 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
                 window.speechSynthesis?.cancel();
                 setIsNavigating(false);
               }}
-              title="Close voice navigation"
+              title={ui.closeVoiceNavigation}
               className="p-1.5 rounded-full bg-white/20 hover:bg-rose-600 text-white transition-colors"
             >
               <X size={15} />
@@ -1223,14 +1293,15 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
               <X size={14} />
             </button>
           </div>
-          <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-start gap-1">
-            <MapPin size={12} className="flex-shrink-0 text-slate-400 mt-0.5" />
+          <div className="text-[11px] text-black dark:text-slate-400 flex items-start gap-1">
+            <MapPin size={12} className="flex-shrink-0 text-black dark:text-slate-400 mt-0.5" />
             <span className="line-clamp-2">{searchedPlace.address}</span>
           </div>
           <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
             <button
               onClick={() => {
                 setDestinationInput(searchedPlace.name);
+                setDestSuggestions([]);
                 setDestCoords({ lat: searchedPlace.lat, lng: searchedPlace.lng, name: searchedPlace.name });
                 setIsDirectionsOpen(true);
                 setSearchedPlace(null);
@@ -1238,7 +1309,7 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
               className="py-1.5 bg-[#1a73e8] hover:bg-blue-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-colors cursor-pointer"
             >
               <Navigation size={13} />
-              <span>Directions</span>
+              <span>{ui.directions}</span>
             </button>
             <button
               onClick={() => {
@@ -1248,7 +1319,7 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
               className="py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors"
             >
               <Maximize2 size={12} />
-              <span>Zoom In</span>
+              <span>{ui.zoomIn}</span>
             </button>
           </div>
         </div>
@@ -1272,8 +1343,7 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
           zoomControl={false}
           attributionControl={false}
           scrollWheelZoom={true}
-          maxBounds={[[-85, -180], [85, 180]]}
-          maxBoundsViscosity={1}
+          worldCopyJump={true}
           style={{ width: '100%', height: '100%', minHeight: isExpanded ? '0' : '340px' }}
         >
           <MapController center={mapCenter} zoom={zoomLevel} routeBounds={routeBounds} />
@@ -1415,7 +1485,7 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
           {showLayerMenu && (
             <div className="absolute bottom-12 left-0 bg-white dark:bg-slate-900 rounded-2xl shadow-[0_6px_20px_rgba(0,0,0,0.35)] border border-slate-200 dark:border-slate-800 p-3 min-w-[210px] flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-2 duration-150">
               <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                Route Map Type
+                {ui.routeMapType}
               </div>
 
               <div className="grid grid-cols-2 gap-1.5">
@@ -1446,7 +1516,7 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
               </div>
 
               <div className="text-[9px] leading-snug text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-800">
-                Open vector styles. Place labels can be selected for details and directions.
+                {ui.mapStyleDescription}
               </div>
             </div>
           )}
@@ -1455,7 +1525,7 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
           <button
             onClick={() => setShowLayerMenu(!showLayerMenu)}
             className="w-9 h-9 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-[0_2px_6px_rgba(0,0,0,0.25)] hover:shadow-lg flex items-center justify-center overflow-hidden transition-all group"
-            title="Route Map Type"
+            title={ui.routeMapType}
           >
             <Layers size={17} className="text-slate-700 dark:text-slate-300 group-hover:scale-110 transition-transform" />
           </button>
@@ -1485,7 +1555,7 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
         {/* Recenter / "Show Your Location" Target Crosshair Button */}
         <button
           onClick={handleRecenter}
-          title="Show your location"
+          title={ui.showYourLocation}
           className="w-9 h-9 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:text-[#1a73e8] dark:hover:text-blue-400 shadow-[0_2px_6px_rgba(0,0,0,0.25)] hover:shadow-lg border border-slate-200 dark:border-slate-800 flex items-center justify-center transition-all active:scale-95"
         >
           <Crosshair size={17} />
@@ -1503,7 +1573,7 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
               }
             }}
             className="w-8 h-8 flex items-center justify-center text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-sm font-bold border-b border-slate-100 dark:border-slate-800 transition-colors"
-            title="Zoom In"
+            title={ui.zoomIn}
           >
             +
           </button>
@@ -1517,7 +1587,7 @@ export function GoogleNavigationMap({ currentLocation, isExpanded, settings }: G
               }
             }}
             className="w-8 h-8 flex items-center justify-center text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-sm font-bold transition-colors"
-            title="Zoom Out"
+            title={ui.zoomOut}
           >
             −
           </button>

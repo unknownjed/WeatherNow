@@ -55,17 +55,3 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
-
-// Handle Broadcast/Client Messages to focus window
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'FOCUS_WINDOW') {
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
-        if ('focus' in client) {
-          client.focus();
-          break;
-        }
-      }
-    });
-  }
-});

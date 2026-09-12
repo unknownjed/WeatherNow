@@ -1,10 +1,11 @@
 import React, { Suspense, useState } from 'react';
 import { Navigation, CloudRain, Maximize, Minimize, Compass, ShieldAlert } from 'lucide-react';
-import { PagasaTyphoonMap } from './PagasaTyphoonMap';
 import { AppSettings } from '../lib/api';
+import { getMapUiLabels } from '../lib/uiLabels';
 
-function RouteMapUnavailable() {
-  return <div className="flex h-full min-h-[350px] w-full items-center justify-center bg-slate-100 px-6 text-center text-sm font-semibold text-slate-800 dark:bg-slate-950 dark:text-slate-200">Route Map could not start on this device. Refresh the dashboard to try again.</div>;
+function RouteMapUnavailable({ language = 'en' }: { language?: string }) {
+  const ui = getMapUiLabels(language);
+  return <div className="flex h-full min-h-[350px] w-full items-center justify-center bg-slate-100 px-6 text-center text-sm font-semibold text-slate-800 dark:bg-slate-950 dark:text-slate-200">{ui.routeMapUnavailable}</div>;
 }
 
 const GoogleNavigationMap = React.lazy(() => import('./GoogleNavigationMap')
@@ -13,6 +14,9 @@ const GoogleNavigationMap = React.lazy(() => import('./GoogleNavigationMap')
     console.error('Route Map failed to load.', error);
     return { default: RouteMapUnavailable };
   }));
+
+const PagasaTyphoonMap = React.lazy(() => import('./PagasaTyphoonMap')
+  .then((module) => ({ default: module.PagasaTyphoonMap })));
 
 interface WeatherMapProps {
   lat: number;
@@ -26,8 +30,9 @@ interface WeatherMapProps {
 
 export function WeatherMap({ lat, lon, name, country, isExpanded, onToggleFullscreen, settings }: WeatherMapProps) {
   const [mapMode, setMapMode] = useState<'google-navigation' | 'pagasa'>('pagasa');
-  const modeLabels: Record<string, [string, string]> = { en: ['Route Map', 'Weather Track'], es: ['Mapa de rutas', 'Seguimiento meteorológico'], fr: ['Carte des itinéraires', 'Suivi météo'], de: ['Routenkarte', 'Wetterverfolgung'], it: ['Mappa percorsi', 'Monitoraggio meteo'], pt: ['Mapa de rotas', 'Rastreamento meteorológico'], ja: ['ルートマップ', '気象トラック'], ko: ['경로 지도', '날씨 추적'], zh: ['路线地图', '天气追踪'], hi: ['मार्ग मानचित्र', 'मौसम ट्रैक'], ru: ['Карта маршрутов', 'Отслеживание погоды'], ar: ['خريطة المسار', 'تتبع الطقس'] };
-  const [routeLabel, trackLabel] = modeLabels[settings?.language || 'en'] || modeLabels.en;
+  const ui = getMapUiLabels(settings?.language || 'en');
+  const routeLabel = ui.routeMap;
+  const trackLabel = ui.weatherTrack;
 
   return (
     <div className="weather-map relative w-full h-full min-h-[350px] flex flex-col bg-slate-950 rounded-lg overflow-hidden border border-sky-300/40 dark:border-slate-800 shadow-inner">
@@ -67,7 +72,7 @@ export function WeatherMap({ lat, lon, name, country, isExpanded, onToggleFullsc
         {onToggleFullscreen && (
           <button
             onClick={onToggleFullscreen}
-            title={isExpanded ? 'Exit Fullscreen' : 'Expand Map'}
+            title={isExpanded ? ui.exitFullscreen : ui.expandMap}
             className="p-1.5 sm:p-2 bg-white/95 dark:bg-slate-900/95 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl border border-slate-200 dark:border-slate-700/80 shadow-[0_2px_8px_rgba(0,0,0,0.25)] backdrop-blur-md transition-colors"
           >
             {isExpanded ? <Minimize size={15} /> : <Maximize size={15} />}
@@ -78,7 +83,7 @@ export function WeatherMap({ lat, lon, name, country, isExpanded, onToggleFullsc
       {/* Map Content View */}
       <div className="w-full h-full flex-1 relative">
         {mapMode === 'google-navigation' ? (
-          <Suspense fallback={<div className="flex h-full w-full items-center justify-center bg-slate-100 text-sm font-medium text-slate-600 dark:bg-slate-950 dark:text-slate-300">Loading Route Map…</div>}>
+          <Suspense fallback={<div className="flex h-full w-full items-center justify-center bg-slate-100 text-sm font-medium text-slate-600 dark:bg-slate-950 dark:text-slate-300">{ui.loadingRouteMap}</div>}>
             <GoogleNavigationMap
               currentLocation={{ lat, lng: lon, name, country }}
               isExpanded={isExpanded}
@@ -90,6 +95,7 @@ export function WeatherMap({ lat, lon, name, country, isExpanded, onToggleFullsc
             lat={lat}
             lon={lon}
             name={name}
+            country={country}
             isExpanded={isExpanded}
             settings={settings}
           />

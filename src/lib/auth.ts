@@ -1,43 +1,38 @@
 import googleConfig from '../../firebase-applet-config.json';
 
-export interface CalendarUser {
-  email: string;
-  displayName?: string | null;
-  photoURL?: string | null;
-}
+import { CALENDAR_SESSION_KEY, clearCalendarSession, readCalendarSession, saveCalendarSession, validCalendarToken, type CalendarUser, type CalendarSession } from './calendarSession';
+export type { CalendarUser } from './calendarSession';
 
 interface GoogleTokenResponse {
   access_token?: string;
   expires_in?: number;
+  scope?: string;
   error?: string;
   error_description?: string;
 }
 
-let cachedAccessToken: string | null = null;
-let cachedUser: CalendarUser | null = null;
-let googleScriptPromise: Promise<void> | null = null;
-const SESSION_KEY = 'weathernow_google_calendar_session';
+const GOOGLE_DRIVE_JOURNAL_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
+const GOOGLE_SCOPES = [
+  'openid',
+  'email',
+  'profile',
+  'https://www.googleapis.com/auth/calendar.events',
+  'https://www.googleapis.com/auth/photoslibrary.appendonly',
+  GOOGLE_DRIVE_JOURNAL_SCOPE,
+];
 
-interface StoredCalendarSession {
-  accessToken: string;
-  expiresAt: number;
-  user: CalendarUser;
+export function hasJournalSyncScope(scope = ''): boolean {
+  return new Set(scope.split(/\s+/).filter(Boolean)).has(GOOGLE_DRIVE_JOURNAL_SCOPE);
 }
 
-function restoreSession(): StoredCalendarSession | null {
-  try {
-    const raw = sessionStorage.getItem(SESSION_KEY);
-    if (!raw) return null;
-    const session = JSON.parse(raw) as StoredCalendarSession;
-    if (!session.accessToken || !session.user?.email || session.expiresAt <= Date.now() + 60_000) {
-      sessionStorage.removeItem(SESSION_KEY);
-      return null;
-    }
-    return session;
-  } catch {
-    sessionStorage.removeItem(SESSION_KEY);
-    return null;
-  }
+let cachedSession: CalendarSession | null = null;
+let googleScriptPromise: Promise<void> | null = null;
+const authListeners = new Set<() => void>();
+const emitAuth = () => authListeners.forEach(listener => listener());
+
+function restoreSession(): CalendarSession | null {
+  try { return readCalendarSession(localStorage, sessionStorage); }
+  catch { return cachedSession; }
 }
 
 function loadGoogleIdentity(): Promise<void> {
@@ -66,18 +61,48 @@ function loadGoogleIdentity(): Promise<void> {
 }
 
 export const initAuth = (
-  onAuthSuccess?: (user: CalendarUser, token: string) => void,
+  onAuthSuccess?: (user: CalendarUser, token: string | null) => void,
   onAuthFailure?: () => void
 ) => {
   loadGoogleIdentity().catch(console.error);
-  const restored = restoreSession();
-  if (restored) {
-    cachedUser = restored.user;
-    cachedAccessToken = restored.accessToken;
-  }
-  if (cachedUser && cachedAccessToken) onAuthSuccess?.(cachedUser, cachedAccessToken);
-  else onAuthFailure?.();
-  return () => undefined;
+  let expiryTimer: ReturnType<typeof setTimeout> | undefined;
+  let lastAccountState: string | undefined;
+  const update = () => {
+    clearTimeout(expiryTimer);
+    cachedSession = restoreSession();
+    if (!cachedSession) {
+      if (lastAccountState !== 'signed-out') onAuthFailure?.();
+      lastAccountState = 'signed-out';
+      return;
+    }
+    const validToken = validCalendarToken(cachedSession);
+    // Sessions created before journal cloud sync was added do not record the
+    // Drive scope. Keep the remembered account, but renew authorization once
+    // before exposing a token to Calendar/Journal consumers.
+    const token = validToken && hasJournalSyncScope(cachedSession.grantedScopes) ? validToken : null;
+    const accountState = JSON.stringify([cachedSession.user, token]);
+    if (lastAccountState !== accountState) onAuthSuccess?.(cachedSession.user, token);
+    lastAccountState = accountState;
+    if (token) {
+      expiryTimer = setTimeout(update, Math.min(2_147_483_647, Math.max(1, cachedSession.expiresAt - Date.now() - 60_000)));
+    }
+  };
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === CALENDAR_SESSION_KEY || event.key === null) update();
+  };
+  const onVisible = () => { if (document.visibilityState === 'visible') update(); };
+  authListeners.add(update);
+  window.addEventListener('storage', onStorage);
+  window.addEventListener('focus', update);
+  document.addEventListener('visibilitychange', onVisible);
+  update();
+  return () => {
+    clearTimeout(expiryTimer);
+    authListeners.delete(update);
+    window.removeEventListener('storage', onStorage);
+    window.removeEventListener('focus', update);
+    document.removeEventListener('visibilitychange', onVisible);
+  };
 };
 
 export const googleSignIn = async (): Promise<{ user: CalendarUser; accessToken: string }> => {
@@ -86,19 +111,32 @@ export const googleSignIn = async (): Promise<{ user: CalendarUser; accessToken:
   if (!clientId) throw new Error('Google OAuth client ID is missing.');
 
   const tokenResponse = await new Promise<GoogleTokenResponse>((resolve, reject) => {
-    const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
+    const remembered = restoreSession();
+    let consentAttempted = !remembered;
+    let tokenClient: any;
+    tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
       client_id: clientId,
-      scope: 'openid email profile https://www.googleapis.com/auth/calendar.readonly',
+      scope: GOOGLE_SCOPES.join(' '),
+      include_granted_scopes: true,
       callback: (response: GoogleTokenResponse) => {
         if (response.error || !response.access_token) {
           reject(new Error(response.error_description || response.error || 'Google authorization failed.'));
+          return;
+        }
+        if (!hasJournalSyncScope(response.scope)) {
+          if (!consentAttempted) {
+            consentAttempted = true;
+            tokenClient.requestAccessToken({ prompt: 'consent', hint: remembered?.user.email });
+            return;
+          }
+          reject(new Error('Private Google Drive journal sync permission was not granted. Reconnect your Google account and approve the requested permissions.'));
           return;
         }
         resolve(response);
       },
       error_callback: (error: { type?: string }) => reject(new Error(error.type || 'Google sign-in popup failed.')),
     });
-    tokenClient.requestAccessToken({ prompt: 'consent' });
+    tokenClient.requestAccessToken({ prompt: remembered ? '' : 'consent', ...(remembered ? { hint: remembered.user.email } : {}) });
   });
   const token = tokenResponse.access_token!;
 
@@ -108,28 +146,35 @@ export const googleSignIn = async (): Promise<{ user: CalendarUser; accessToken:
   if (!profileResponse.ok) throw new Error(`Google profile request failed (${profileResponse.status}).`);
   const profile = await profileResponse.json();
 
-  cachedAccessToken = token;
-  cachedUser = {
+  const user: CalendarUser = {
     email: profile.email,
     displayName: profile.name || null,
     photoURL: profile.picture || null,
   };
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+  const session: CalendarSession = {
     accessToken: token,
     expiresAt: Date.now() + (tokenResponse.expires_in || 3600) * 1000,
-    user: cachedUser,
-  } satisfies StoredCalendarSession));
-  return { user: cachedUser, accessToken: token };
+    grantedScopes: tokenResponse.scope || '',
+    user,
+  };
+  saveCalendarSession(localStorage, sessionStorage, session);
+  cachedSession = session;
+  emitAuth();
+  return { user, accessToken: token };
 };
 
-export const getAccessToken = async (): Promise<string | null> => cachedAccessToken;
+export const getAccessToken = async (): Promise<string | null> => validCalendarToken(restoreSession());
 
 export const logout = async () => {
-  const token = cachedAccessToken;
-  cachedAccessToken = null;
-  cachedUser = null;
-  sessionStorage.removeItem(SESSION_KEY);
+  const token = validCalendarToken(cachedSession);
+  clearCalendarSession(localStorage, sessionStorage);
+  cachedSession = null;
+
+  // App handles the same-tab signed-out UI directly. Do not synchronously emit
+  // an auth update here: that used to re-enter App while the logout click was
+  // still tearing down Calendar/Journal UI. Other tabs still receive the
+  // localStorage change through their normal storage listener.
   if (token && (window as any).google?.accounts?.oauth2) {
-    await new Promise<void>((resolve) => (window as any).google.accounts.oauth2.revoke(token, resolve));
+    (window as any).google.accounts.oauth2.revoke(token, () => undefined);
   }
 };

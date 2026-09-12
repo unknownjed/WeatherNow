@@ -1,5 +1,5 @@
 import React from 'react';
-import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { format, parseISO } from 'date-fns';
 import { getDateLocale } from '../lib/i18n';
 
@@ -28,15 +28,24 @@ export function WeatherChart({ data, settings }: { data: any; settings: any }) {
   });
 
   return (
-    <div className="forecast-temperature-chart w-full h-full relative min-h-0">
+    <div
+      className="forecast-temperature-chart w-full h-full relative min-h-0"
+      onPointerDown={(event) => event.preventDefault()}
+    >
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+        <AreaChart accessibilityLayer={false} data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
           <defs>
             <linearGradient id="colorTemp" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="#6366f1" stopOpacity={0.8}/>
               <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
             </linearGradient>
           </defs>
+          <CartesianGrid
+            vertical={false}
+            stroke="var(--forecast-chart-grid)"
+            strokeOpacity={0.45}
+            strokeDasharray="3 3"
+          />
           <XAxis 
             dataKey="time" 
             axisLine={false}

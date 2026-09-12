@@ -56,13 +56,15 @@ export function HourlyForecast({ data, settings, current }: { data: any; setting
     >
       {hours.map((hour: any, i: number) => (
         <div key={i} className="forecast-period-tile flex flex-col items-center justify-between min-w-[60px] sm:min-w-[72px] bg-white dark:bg-slate-950/40 rounded-lg p-2 sm:p-3 border border-sky-200 dark:border-slate-800 h-full flex-shrink-0 select-none overflow-hidden">
-          <div className="text-[10px] sm:text-xs font-bold text-sky-800 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
+          <div data-weather-accent="forecast-hour" className="forecast-hour-label text-[10px] sm:text-xs font-bold text-blue-600 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
             {i === 0 ? t('currently') : format(hour.date, settings?.timeFormat === '24h' ? 'HH:mm' : 'ha', { locale: getDateLocale(settings?.language || 'en') })}
           </div>
           <div className="my-1 sm:my-2 flex-1 flex items-center justify-center min-h-[36px] w-full">
             <WeatherIcon code={hour.code} isDay={hour.isDay} className="w-8 h-8 sm:w-9 sm:h-9 pointer-events-none" />
           </div>
-          <span className="text-sm sm:text-base font-medium text-sky-950 dark:text-slate-200 font-mono leading-none">{Math.round(hour.temp)}°</span>
+          <span className="text-sm sm:text-base font-medium text-sky-950 dark:text-slate-200 font-mono leading-none">
+            {Math.round(hour.temp)}{String.fromCharCode(176)}{settings?.tempUnit === 'fahrenheit' ? 'F' : 'C'}
+          </span>
           <span className={`text-[9px] sm:text-[10px] font-mono leading-none ${hour.precip > 0 ? 'text-blue-400' : 'text-transparent'}`}>{hour.precip || 0}%</span>
         </div>
       ))}
