@@ -12,6 +12,10 @@ import type { CycloneFeed, LatLon, LiveCyclone } from '../lib/cycloneTypes';
 interface Props { lat: number; lon: number; name: string; country?: string; isExpanded?: boolean; settings?: AppSettings }
 const stamp = (time: string, language: string = 'en') => new Date(time).toLocaleString(language);
 const old = (storm: LiveCyclone) => Date.now() - Date.parse(storm.issuedAt) > 12 * 60 * 60_000;
+const cleanMapText = (value: string) => value
+  .replace(/\u00e2\u20ac[\u201c\u201d]/g, '-')
+  .replace(/\u00e2\u20ac\u00a6/g, '...');
+
 const cycloneIcon = L.divIcon({
   className: 'cyclone-map-icon',
   html: '<svg viewBox="0 0 48 48" aria-label="Cyclone"><circle cx="24" cy="24" r="21" fill="#dc2626" stroke="#fff" stroke-width="2"/><path d="M24 10c-9 0-14 6-14 13 0 7 5 12 13 12 6 0 10-3 10-8 0-4-3-7-8-7-4 0-7 2-7 5 0 2 2 4 5 4" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/><circle cx="24" cy="24" r="2.5" fill="#fff"/></svg>',
@@ -33,9 +37,9 @@ export function splitTrack(points: LatLon[]): LatLon[][] {
   return segments;
 }
 
-function FollowLocation({ lat, lon, isExpanded }: Props) {
+function FollowLocation({ lat, lon, isExpanded, zoom }: Props & { zoom: number }) {
   const map = useMap();
-  useEffect(() => { map.setView([lat, lon], 5); }, [lat, lon, map]);
+  useEffect(() => { map.setView([lat, lon], zoom); }, [lat, lon, map, zoom]);
   useEffect(() => {
     const timer = window.setTimeout(() => map.invalidateSize(), 120);
 
@@ -634,7 +638,7 @@ function MtgEnhancedIrLayer() {
 
     const layer = new Layer({
       tileSize: 256,
-      minZoom: 5,
+      minZoom: 4,
       maxZoom: 10,
       noWrap: true,
       bounds: L.latLngBounds([[-60, -30], [72, 77]]),
@@ -717,6 +721,7 @@ export function PagasaTyphoonMap({ lat, lon, name, country = '', isExpanded, set
   const language = settings?.language || 'en';
   const ui = React.useMemo(() => getMapUiLabels(language), [language]);
   const mapRef = useRef<L.Map | null>(null);
+  const mapZoom = typeof window !== 'undefined' && window.matchMedia('(max-width: 1199px)').matches ? 4 : 5;
   const [feed, setFeed] = useState<CycloneFeed | null>(null);
   const [feedError, setFeedError] = useState('');
   const [expanded, setExpanded] = useState(false);
@@ -884,14 +889,14 @@ export function PagasaTyphoonMap({ lat, lon, name, country = '', isExpanded, set
   const focusStorm = (id: string) => {
     setSelected(id);
     const storm = storms.find(s => s.id === id);
-    if (storm) mapRef.current?.setView(storm.position, 5);
+    if (storm) mapRef.current?.setView(storm.position, mapZoom);
   };
 
   return <div className="relative w-full h-full min-h-[360px] flex flex-col bg-slate-950 text-slate-100 overflow-hidden">
     <div className="w-full flex-1 relative min-h-0">
-      <MapContainer ref={mapRef} center={[lat, lon]} zoom={5} minZoom={5} maxZoom={10}
+      <MapContainer ref={mapRef} center={[lat, lon]} zoom={mapZoom} minZoom={mapZoom} maxZoom={10}
         worldCopyJump style={{ width: '100%', height: '100%', minHeight: isExpanded ? '0' : '300px' }} dragging={false} scrollWheelZoom={false} keyboard={false} boxZoom={false}>
-        <FollowLocation lat={lat} lon={lon} name={name} isExpanded={isExpanded} />
+        <FollowLocation lat={lat} lon={lon} name={name} isExpanded={isExpanded} zoom={mapZoom} />
         <CloseCycloneBulletinOnMapClick onClose={() => setExpanded(false)} />
         <TileLayer attribution="&copy; Esri" url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" maxNativeZoom={10} maxZoom={10} />
 
@@ -973,7 +978,7 @@ export function PagasaTyphoonMap({ lat, lon, name, country = '', isExpanded, set
     <div className="relative flex-none h-11 p-1 bg-slate-950 z-[1000]">
       <button type="button" onClick={() => setExpanded(!expanded)} aria-expanded={expanded}
         className="w-full h-9 flex items-center justify-between gap-2 rounded border border-slate-700 bg-slate-900 px-2 text-xs text-white">
-        <span className="truncate">{ui.cycloneBulletin} - {feedError ? ui.feedUnavailable : feed ? `${storms.length} ${ui.reportedBy}` : ui.loading}</span>
+        <span className="truncate">{cleanMapText(ui.cycloneBulletin)} - {feedError ? cleanMapText(ui.feedUnavailable) : feed ? `${storms.length} ${cleanMapText(ui.reportedBy)}` : cleanMapText(ui.loading)}</span>
         {expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
       </button>
       <div className={`absolute bottom-full inset-x-1 flex flex-col items-end gap-2 pointer-events-none ${expanded ? '' : 'pb-7'}`}>
@@ -988,7 +993,7 @@ export function PagasaTyphoonMap({ lat, lon, name, country = '', isExpanded, set
             // reappears even before the rest of the dashboard finishes
             // synchronizing to Current Location.
             setSatellitePosition([target[0], target[1]]);
-            mapRef.current?.setView(target, 5);
+            mapRef.current?.setView(target, mapZoom);
 
             window.dispatchEvent(new CustomEvent('weathernow:use-current-location', {
               detail: {
