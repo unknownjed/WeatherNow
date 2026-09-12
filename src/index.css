@@ -846,3 +846,71 @@ html.dark #root .google-calendar-panel .fc-col-header-cell-cushion {
   -webkit-text-fill-color: #0f172a !important;
   font-weight: 700 !important;
 }
+
+
+/* Dark mode: force FullCalendar weekday names visible inside the light header row.
+   Target the anchor/text element itself and common FullCalendar nested spans. */
+html.dark #root .google-calendar-panel .fc-col-header-cell-cushion,
+html.dark #root .google-calendar-panel .fc-col-header-cell-cushion *,
+html.dark #root .google-calendar-panel .fc-col-header-cell a,
+html.dark #root .google-calendar-panel .fc-col-header-cell span {
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  font-weight: 800 !important;
+  text-shadow: none !important;
+}
+
+
+/* Mobile/tablet only: keep Settings and Header action buttons the same blue as desktop.
+   This overrides older dark-mode indigo/purple rules only below the desktop breakpoint. */
+@media (max-width: 1199px) {
+  #root .settings-panel button[class*="bg-blue-600"],
+  #root .settings-panel button[class*="bg-indigo-600"],
+  #root .dashboard-header button[class*="bg-blue-600"],
+  #root .dashboard-header button[class*="bg-indigo-600"] {
+    background-color: #2563eb !important;
+    border-color: #1d4ed8 !important;
+    color: #ffffff !important;
+  }
+
+  #root .settings-panel button[class*="bg-blue-600"]:hover,
+  #root .settings-panel button[class*="bg-indigo-600"]:hover,
+  #root .dashboard-header button[class*="bg-blue-600"]:hover,
+  #root .dashboard-header button[class*="bg-indigo-600"]:hover {
+    background-color: #3b82f6 !important;
+  }
+
+  /* Force mobile/tablet to fetch the same current blue WeatherNow logo asset
+     instead of a stale cached purple copy. */
+  #root .dashboard-header .header-brand img[alt="WeatherNow"],
+  #root .settings-panel img[alt="WeatherNow"] {
+    content: url("/icon-192x192.png?v=blue-20260912") !important;
+  }
+}
+
+
+/* Mobile/tablet only: keep Current Forecast blue accents consistent with desktop. */
+@media (max-width: 1199px) {
+  /* Celsius/Fahrenheit degree + unit */
+  #root .current-weather-tile .current-weather-degree,
+  #root .current-weather-tile .current-weather-unit {
+    color: #2563eb !important;
+    -webkit-text-fill-color: #2563eb !important;
+  }
+
+  /* Current forecast location text */
+  #root .current-weather-tile span[title][class*="text-indigo-"] {
+    color: #2563eb !important;
+    -webkit-text-fill-color: #2563eb !important;
+  }
+
+  /* Weather forecaster icon/button */
+  #root .current-weather-tile #weather-forecaster-btn,
+  #root .current-weather-tile #weather-forecaster-btn svg,
+  #root .current-weather-tile #weather-forecaster-btn svg * {
+    color: #2563eb !important;
+    stroke: #2563eb !important;
+  }
+}
