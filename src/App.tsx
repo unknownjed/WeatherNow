@@ -1325,10 +1325,10 @@ export default function App() {
             </div>
           </section>
         {activeTab === 'calendar' ? (
-          <section className="flex-1 relative min-h-0 bg-sky-100 dark:bg-slate-950 overflow-hidden p-3 sm:p-4">
-            <div className="grid h-full min-h-0 grid-cols-1 items-start gap-4 xl:grid-cols-12 xl:items-stretch">
+          <section className="flex-1 relative min-h-0 bg-sky-100 dark:bg-slate-950 overflow-y-auto p-3 sm:p-4 xl:overflow-hidden">
+            <div className="grid min-h-0 grid-cols-1 items-start gap-4 xl:h-full xl:grid-cols-12 xl:items-stretch">
               <div className="flex min-h-0 flex-col gap-3 xl:col-span-6 xl:h-full">
-              <div className="calendar-month-tile flex w-full min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-sky-200 bg-white dark:border-slate-800 dark:bg-slate-900" style={{ height: "100%", maxHeight: "100%" }}>
+              <div className="calendar-month-tile flex w-full min-h-0 flex-none flex-col overflow-hidden rounded-xl border border-sky-200 bg-white dark:border-slate-800 dark:bg-slate-900 xl:flex-1">
                 <div className="min-h-0 flex-1">
             {user ? (
               <div className="flex h-full min-h-0 flex-col">
@@ -1371,7 +1371,7 @@ export default function App() {
                 </div>
               </div>}
               </div>
-              <div className="min-h-0 overflow-hidden xl:col-span-6 xl:h-full xl:[&>aside]:!h-full xl:[&>aside]:!max-h-full">
+              <div className="min-h-0 overflow-visible xl:col-span-6 xl:h-full xl:overflow-hidden xl:[&>aside]:!h-full xl:[&>aside]:!max-h-full">
                 <WeatherJournal locationName={location.name} language={settings.language} accountLinked={Boolean(user)} googleAccessToken={token} selectedDate={calendarDate} onDatesChange={setJournalDates} />
               </div>
             </div>
