@@ -18,6 +18,7 @@ export default defineConfig(() => {
           cleanupOutdatedCaches: true,
           clientsClaim: true,
           skipWaiting: true,
+          navigateFallbackDenylist: [/^\/privacy(?:\/|$)/, /^\/terms(?:\/|$)/],
         },
         includeAssets: ['favicon.png', 'icon-192x192.png', 'icon-512x512.png', 'icon-maskable-512x512.png', 'apple-touch-icon.png'],
         manifest: {
