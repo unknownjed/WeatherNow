@@ -916,13 +916,6 @@ html.dark #root .google-calendar-panel .fc-col-header-cell span {
 }
 
 
-/* Mobile/tablet only: shift the header WeatherNow logo from indigo/purple to blue.
-   Header logo only; Settings/About logo and desktop logo are untouched. */
-@media (max-width: 1199px) {
-  #root .dashboard-header .header-brand img[alt="WeatherNow"] {
-    filter: hue-rotate(-22deg) saturate(1.08) !important;
-  }
-}
 
 
 /* Mobile/tablet only: keep the Current Forecast forecaster button blue while speaking/playing.
@@ -972,4 +965,10 @@ html.dark #root .google-calendar-panel .fc-col-header-cell span {
     stroke: #ffffff !important;
     fill: currentColor !important;
   }
+}
+
+/* Keep the header WeatherNow logo visually identical to the About logo on all devices. */
+#root .dashboard-header .header-brand img[alt="WeatherNow"] {
+  content: url("/icon-192x192.png?v=blue-20260912") !important;
+  filter: none !important;
 }
