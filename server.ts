@@ -280,6 +280,8 @@ async function startServer() {
   
   // 1. Weather Forecast Proxy
   const weatherCache = new Map<string, { savedAt: number; data: any }>();
+  const weatherInFlight = new Map<string, Promise<any>>();
+  const WEATHER_FRESH_CACHE_MS = 90_000;
 
   app.get("/api/weather", async (req, res) => {
     const { lat, lon, tempUnit, windUnit, precipUnit } = req.query;
@@ -291,24 +293,48 @@ async function startServer() {
     if (precipUnit === 'inch') url += '&precipitation_unit=inch';
 
     try {
-      let lastError: unknown = null;
-
-      // Retry once so a brief Open-Meteo connection timeout does not immediately fail.
-      for (let attempt = 0; attempt < 2; attempt += 1) {
-        try {
-          const response = await fetch(url, { signal: AbortSignal.timeout(12_000) });
-          if (!response.ok) throw new Error(`Weather API Error: ${response.status}`);
-
-          const data = await response.json();
-          weatherCache.set(cacheKey, { savedAt: Date.now(), data });
-          return res.json(data);
-        } catch (error) {
-          lastError = error;
-          if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 350));
-        }
+      const freshCached = weatherCache.get(cacheKey);
+      if (freshCached && Date.now() - freshCached.savedAt <= WEATHER_FRESH_CACHE_MS) {
+        res.setHeader('Cache-Control', 'private, max-age=30');
+        return res.json(freshCached.data);
       }
 
-      throw lastError;
+      let requestPromise = weatherInFlight.get(cacheKey);
+      if (!requestPromise) {
+        requestPromise = (async () => {
+          let lastError: unknown = null;
+
+          // Retry only transport failures. A 429 is a rate-limit response and an
+          // immediate second request makes throttling worse.
+          for (let attempt = 0; attempt < 2; attempt += 1) {
+            try {
+              const response = await fetch(url, { signal: AbortSignal.timeout(12_000) });
+              if (!response.ok) {
+                const error: any = new Error(`Weather API Error: ${response.status}`);
+                error.status = response.status;
+                error.retryAfter = response.headers.get('retry-after');
+                throw error;
+              }
+
+              const data = await response.json();
+              weatherCache.set(cacheKey, { savedAt: Date.now(), data });
+              return data;
+            } catch (error: any) {
+              lastError = error;
+              if (error?.status === 429 || (typeof error?.status === 'number' && error.status >= 400 && error.status < 500)) break;
+              if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 500));
+            }
+          }
+
+          throw lastError;
+        })();
+        weatherInFlight.set(cacheKey, requestPromise);
+        requestPromise.finally(() => weatherInFlight.delete(cacheKey)).catch(() => undefined);
+      }
+
+      const data = await requestPromise;
+      res.setHeader('Cache-Control', 'private, max-age=30');
+      return res.json(data);
     } catch (error: any) {
       const cached = weatherCache.get(cacheKey);
       if (cached) {
@@ -1818,7 +1844,13 @@ app.get("/api/nhc-cyclones", async (_req, res) => {
     }
   });
 
+  const radarTileCache = new Map<string, { savedAt: number; contentType: string; bytes: Buffer }>();
+  const radarTileInFlight = new Map<string, Promise<{ contentType: string; bytes: Buffer }>>();
+  const RADAR_TILE_FRESH_MS = 10 * 60_000;
+  const RADAR_TILE_STALE_MS = 60 * 60_000;
+
   app.get('/api/radar-tile', async (req, res) => {
+    let tileKey = '';
     try {
       const framePath = typeof req.query.path === 'string' ? req.query.path : '';
       const z = Number(req.query.z);
@@ -1828,25 +1860,64 @@ app.get("/api/nhc-cyclones", async (_req, res) => {
           !Number.isInteger(x) || x < 0 || !Number.isInteger(y) || y < 0) {
         return res.status(400).send('Invalid radar tile request');
       }
-      const tileUrl = `https://tilecache.rainviewer.com${framePath}/256/${z}/${x}/${y}/2/1_1.png`;
-      const response = await fetch(tileUrl, {
-        headers: {
-          Accept: 'image/png,image/*;q=0.8,*/*;q=0.5',
-          Referer: 'https://www.rainviewer.com/',
-          'User-Agent': 'Mozilla/5.0 (WeatherNow dashboard)',
-        },
-        signal: AbortSignal.timeout(12_000),
-      });
-      if (!response.ok) throw new Error(`RainViewer tile returned ${response.status}`);
-      const contentType = response.headers.get('content-type') || '';
-      if (!contentType.toLowerCase().startsWith('image/')) throw new Error('RainViewer tile was not an image');
-      const bytes = Buffer.from(await response.arrayBuffer());
-      if (!bytes.length || bytes.length > 4 * 1024 * 1024) throw new Error('Invalid RainViewer tile size');
-      res.setHeader('Content-Type', contentType);
-      res.setHeader('Cache-Control', 'public, max-age=300');
-      return res.send(bytes);
-    } catch (error) {
-      console.error('Server proxy error (Radar tile):', error);
+      tileKey = `${framePath}|${z}|${x}|${y}`;
+      const cached = radarTileCache.get(tileKey);
+      if (cached && Date.now() - cached.savedAt <= RADAR_TILE_FRESH_MS) {
+        res.setHeader('Content-Type', cached.contentType);
+        res.setHeader('Cache-Control', 'public, max-age=600, stale-while-revalidate=3600');
+        return res.send(cached.bytes);
+      }
+
+      let requestPromise = radarTileInFlight.get(tileKey);
+      if (!requestPromise) {
+        requestPromise = (async () => {
+          const tileUrl = `https://tilecache.rainviewer.com${framePath}/256/${z}/${x}/${y}/2/1_1.png`;
+          const response = await fetch(tileUrl, {
+            headers: {
+              Accept: 'image/png,image/*;q=0.8,*/*;q=0.5',
+              Referer: 'https://www.rainviewer.com/',
+              'User-Agent': 'Mozilla/5.0 (WeatherNow dashboard)',
+            },
+            signal: AbortSignal.timeout(8_000),
+          });
+          if (!response.ok) throw new Error(`RainViewer tile returned ${response.status}`);
+          const contentType = response.headers.get('content-type') || '';
+          if (!contentType.toLowerCase().startsWith('image/')) throw new Error('RainViewer tile was not an image');
+          const bytes = Buffer.from(await response.arrayBuffer());
+          if (!bytes.length || bytes.length > 4 * 1024 * 1024) throw new Error('Invalid RainViewer tile size');
+          const result = { contentType, bytes };
+          radarTileCache.set(tileKey, { savedAt: Date.now(), ...result });
+          if (radarTileCache.size > 800) {
+            const firstKey = radarTileCache.keys().next().value;
+            if (firstKey) radarTileCache.delete(firstKey);
+          }
+          return result;
+        })();
+        radarTileInFlight.set(tileKey, requestPromise);
+        requestPromise.finally(() => radarTileInFlight.delete(tileKey)).catch(() => undefined);
+      }
+
+      const tile = await requestPromise;
+      res.setHeader('Content-Type', tile.contentType);
+      res.setHeader('Cache-Control', 'public, max-age=600, stale-while-revalidate=3600');
+      return res.send(tile.bytes);
+    } catch (error: any) {
+      const cached = tileKey ? radarTileCache.get(tileKey) : undefined;
+      if (cached && Date.now() - cached.savedAt <= RADAR_TILE_STALE_MS) {
+        console.warn('RainViewer tile upstream failed; serving stale cached tile.');
+        res.setHeader('Content-Type', cached.contentType);
+        res.setHeader('Cache-Control', 'public, max-age=60');
+        res.setHeader('Warning', '110 - Response is stale');
+        return res.send(cached.bytes);
+      }
+
+      const timedOut =
+        error?.name === 'TimeoutError' ||
+        error?.name === 'AbortError' ||
+        error?.cause?.code === 'UND_ERR_CONNECT_TIMEOUT' ||
+        error?.cause?.code === 'ETIMEDOUT' ||
+        /timeout|timed out|ETIMEDOUT/i.test(String(error?.message || ''));
+      console.warn(timedOut ? 'RainViewer radar tile timed out.' : 'RainViewer radar tile unavailable.');
       return res.status(502).send('Radar tile unavailable');
     }
   });
@@ -1953,16 +2024,38 @@ app.get("/api/nhc-cyclones", async (_req, res) => {
     .meta { color: #64748b; margin: 0 0 1.75rem; }
     a { color: #2563eb; }
     nav { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid #e2e8f0; }
+    .close-button {
+      position: fixed;
+      top: max(14px, env(safe-area-inset-top, 0px));
+      right: max(14px, env(safe-area-inset-right, 0px));
+      z-index: 20;
+      width: 42px;
+      height: 42px;
+      border: 1px solid #cbd5e1;
+      border-radius: 999px;
+      background: rgba(255,255,255,.94);
+      color: #0f172a;
+      font: 700 26px/1 system-ui, sans-serif;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(15,23,42,.14);
+    }
+    .close-button:hover { background: #f1f5f9; }
+    .close-button:focus-visible { outline: 3px solid #60a5fa; outline-offset: 2px; }
     @media (prefers-color-scheme: dark) {
       body { background: #020617; color: #e2e8f0; }
       .card { background: #0f172a; border-color: #334155; box-shadow: none; }
       .meta { color: #94a3b8; }
       a { color: #60a5fa; }
       nav { border-color: #334155; }
+      .close-button { background: rgba(15,23,42,.94); color: #e2e8f0; border-color: #475569; }
+      .close-button:hover { background: #1e293b; }
     }
   </style>
 </head>
 <body>
+  <button class="close-button" type="button" aria-label="Close and return to dashboard" title="Close" onclick="if (history.length > 1) { history.back(); } else { location.href = '/'; }">&times;</button>
   <main>
     <article class="card">
       ${body}
