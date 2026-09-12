@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Circle, CircleMarker, GeoJSON, MapContainer, Marker, Pane, Polyline, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -337,7 +337,7 @@ function HimawariFullDiskAnimatedLayer({
       noWrap: true,
       updateWhenIdle: true,
       updateWhenZooming: false,
-      attribution: 'Himawari-9 Enhanced IR â€” Japan Meteorological Agency',
+      attribution: 'Himawari-9 Enhanced IR - Japan Meteorological Agency',
     });
 
     layer.setZIndex(500);
@@ -461,7 +461,7 @@ function HimawariAnimatedOverlay({
         {
           opacity: 0.60,
           zIndex: 640,
-          attribution: 'Himawari IR Extended â€” PAGASA PANaHON',
+          attribution: 'Himawari IR Extended - PAGASA PANaHON',
           interactive: false,
         },
       ).addTo(map);
@@ -508,8 +508,8 @@ function RegionalSatelliteLayer({ lat, lon }: { lat: number; lon: number }) {
       : 'EUMETSAT_MTG_0Deg_IR105_10min';
 
     const attribution = isAmericas
-      ? 'GOES ABI Clean IR â€” NASA GIBS / NOAA'
-      : 'Meteosat/MTG IR â€” NASA GIBS / EUMETSAT';
+      ? 'GOES ABI Clean IR - NASA GIBS / NOAA'
+      : 'Meteosat/MTG IR - NASA GIBS / EUMETSAT';
 
     const layer = L.tileLayer.wms(
       'https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi',
@@ -640,7 +640,7 @@ function MtgEnhancedIrLayer() {
       bounds: L.latLngBounds([[-60, -30], [72, 77]]),
       updateWhenIdle: true,
       updateWhenZooming: false,
-      attribution: 'MTG Enhanced IR â€” EUMETSAT',
+      attribution: 'MTG Enhanced IR - EUMETSAT',
     });
 
     layer.setZIndex(491);
@@ -703,7 +703,7 @@ function WhiteMapBoundaryLayer() {
 
 function StormDetails({ storm, ui, language }: { storm: LiveCyclone; ui: MapUiLabels; language: string }) {
   return <>
-    <strong>{storm.name} â€” {storm.category}</strong><br />
+    <strong>{storm.name} - {storm.category}</strong><br />
     {ui.source}: {storm.agency}<br />
     {ui.issued}: {stamp(storm.issuedAt, language)}<br />
     {ui.positionTime}: {stamp(storm.observedAt, language)}<br />
@@ -929,7 +929,7 @@ export function PagasaTyphoonMap({ lat, lon, name, country = '', isExpanded, set
             </Polyline>)}
           {showTracks && storm.forecast.map(fix => <React.Fragment key={fix.validAt}>
             <CircleMarker center={fix.position} radius={4} pathOptions={{ color: '#fff', fillColor: '#f97316', fillOpacity: 1, weight: 1 }}>
-              <Popup>{storm.name} â€” {storm.agency}<br />{ui.forecastValid}: {stamp(fix.validAt, language)}<br />+{fix.leadHours} {ui.hours}</Popup>
+              <Popup>{storm.name} - {storm.agency}<br />{ui.forecastValid}: {stamp(fix.validAt, language)}<br />+{fix.leadHours} {ui.hours}</Popup>
             </CircleMarker>
             {showUncertainty && fix.probabilityRadiusM && <Circle center={fix.position} radius={fix.probabilityRadiusM} pathOptions={{ color: '#c084fc', weight: 1, dashArray: '4 4', fillOpacity: 0.025 }} />}
           </React.Fragment>)}
@@ -973,7 +973,7 @@ export function PagasaTyphoonMap({ lat, lon, name, country = '', isExpanded, set
     <div className="relative flex-none h-11 p-1 bg-slate-950 z-[1000]">
       <button type="button" onClick={() => setExpanded(!expanded)} aria-expanded={expanded}
         className="w-full h-9 flex items-center justify-between gap-2 rounded border border-slate-700 bg-slate-900 px-2 text-xs text-white">
-        <span className="truncate">{ui.cycloneBulletin} â€” {feedError ? ui.feedUnavailable : feed ? `${storms.length} ${ui.reportedBy}` : ui.loading}</span>
+        <span className="truncate">{ui.cycloneBulletin} - {feedError ? ui.feedUnavailable : feed ? `${storms.length} ${ui.reportedBy}` : ui.loading}</span>
         {expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
       </button>
       <div className={`absolute bottom-full inset-x-1 flex flex-col items-end gap-2 pointer-events-none ${expanded ? '' : 'pb-7'}`}>
@@ -1016,17 +1016,17 @@ export function PagasaTyphoonMap({ lat, lon, name, country = '', isExpanded, set
         {feedError && <p role="status" className="text-amber-300">{feedError}</p>}
         {feed?.sources
           .filter(source => source.state !== 'unavailable')
-          .map(source => <p key={source.agency}>{source.agency}: {source.state}{source.message ? ` â€” ${source.message}` : ''}</p>)}
+          .map(source => <p key={source.agency}>{source.agency}: {source.state}{source.message ? ` - ${source.message}` : ''}</p>)}
         {showHimawari && (
           <>
             {himawariFullDiskTimeline && (
               <p>
-                Himawari full-disk animation: {himawariFullDiskFrameTime ? stamp(himawariFullDiskFrameTime, language) : 'loading framesâ€¦'}
-                {' '}â€” {himawariFullDiskTimeline.frames.length} real JMA frames. Whole-map satellite layer.
+                Himawari full-disk animation: {himawariFullDiskFrameTime ? stamp(himawariFullDiskFrameTime, language) : 'loading frames...'}
+                {' '}- {himawariFullDiskTimeline.frames.length} real JMA frames. Whole-map satellite layer.
               </p>
             )}
             {!himawariFullDiskTimeline && rainViewerFramePath && (
-              <p>Himawari unavailable â€” RainViewer radar backup is active.</p>
+              <p>Himawari unavailable - RainViewer radar backup is active.</p>
             )}
             {himawariFullDiskError && <p>{himawariFullDiskError}</p>}
             {!himawariFullDiskTimeline && rainViewerError && <p>{rainViewerError}</p>}
