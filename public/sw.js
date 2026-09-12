@@ -1,5 +1,5 @@
 // Service Worker for PWA (network-first in development for immediate live preview updates)
-const CACHE_NAME = 'weathernow-v3';
+const CACHE_NAME = 'weathernow-v4';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -18,8 +18,15 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Bypass API proxy requests and non-GET
-  if (event.request.method !== 'GET' || url.pathname.startsWith('/api/')) {
+  // Bypass API proxy requests, legal pages, and non-GET requests.
+  // Privacy Policy and Terms of Service must always go directly to the server
+  // instead of ever falling back to the cached WeatherNow dashboard.
+  if (
+    event.request.method !== 'GET' ||
+    url.pathname.startsWith('/api/') ||
+    url.pathname === '/privacy' ||
+    url.pathname === '/terms'
+  ) {
     return;
   }
 
