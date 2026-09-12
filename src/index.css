@@ -923,3 +923,35 @@ html.dark #root .google-calendar-panel .fc-col-header-cell span {
     filter: hue-rotate(-22deg) saturate(1.08) !important;
   }
 }
+
+
+/* Mobile/tablet only: keep the Current Forecast forecaster button blue while speaking/playing.
+   Override any indigo/purple active-state utility classes without changing behavior. */
+@media (max-width: 1199px) {
+  #root .current-weather-tile #weather-forecaster-btn[class*="bg-indigo-"],
+  #root .current-weather-tile #weather-forecaster-btn[class*="bg-purple-"] {
+    background-color: #2563eb !important;
+  }
+
+  #root .current-weather-tile #weather-forecaster-btn[class*="border-indigo-"],
+  #root .current-weather-tile #weather-forecaster-btn[class*="border-purple-"] {
+    border-color: #2563eb !important;
+  }
+
+  #root .current-weather-tile #weather-forecaster-btn[class*="ring-indigo-"],
+  #root .current-weather-tile #weather-forecaster-btn[class*="ring-purple-"] {
+    --tw-ring-color: rgba(37, 99, 235, 0.55) !important;
+  }
+
+  #root .current-weather-tile #weather-forecaster-btn[class*="shadow-indigo-"],
+  #root .current-weather-tile #weather-forecaster-btn[class*="shadow-purple-"] {
+    --tw-shadow-color: rgba(37, 99, 235, 0.45) !important;
+  }
+
+  #root .current-weather-tile #weather-forecaster-btn,
+  #root .current-weather-tile #weather-forecaster-btn svg,
+  #root .current-weather-tile #weather-forecaster-btn svg * {
+    color: #2563eb !important;
+    stroke: #2563eb !important;
+  }
+}
