@@ -955,3 +955,21 @@ html.dark #root .google-calendar-panel .fc-col-header-cell span {
     stroke: #2563eb !important;
   }
 }
+
+
+/* Mobile/tablet only: make the Current Forecast forecaster PLAYING state match desktop.
+   Inactive icon stays blue; while speaking, the button is blue with a white Stop icon. */
+@media (max-width: 1199px) {
+  #root .current-weather-tile #weather-forecaster-btn.animate-pulse {
+    background-color: #2563eb !important;
+    border-color: #2563eb !important;
+    color: #ffffff !important;
+  }
+
+  #root .current-weather-tile #weather-forecaster-btn.animate-pulse svg,
+  #root .current-weather-tile #weather-forecaster-btn.animate-pulse svg * {
+    color: #ffffff !important;
+    stroke: #ffffff !important;
+    fill: currentColor !important;
+  }
+}
