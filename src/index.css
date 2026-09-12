@@ -914,3 +914,12 @@ html.dark #root .google-calendar-panel .fc-col-header-cell span {
     stroke: #2563eb !important;
   }
 }
+
+
+/* Mobile/tablet only: shift the header WeatherNow logo from indigo/purple to blue.
+   Header logo only; Settings/About logo and desktop logo are untouched. */
+@media (max-width: 1199px) {
+  #root .dashboard-header .header-brand img[alt="WeatherNow"] {
+    filter: hue-rotate(-22deg) saturate(1.08) !important;
+  }
+}
