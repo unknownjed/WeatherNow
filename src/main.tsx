@@ -9,6 +9,7 @@ warmForecastVoices();
 
 // Never let an older installed PWA cache mask source changes while the dashboard
 // is being served by Vite (`npm run dev`), including through Tailscale Funnel.
+// Production builds keep their normal auto-updating service worker behavior.
 if ('serviceWorker' in navigator) {
   if (import.meta.env.DEV) {
     void navigator.serviceWorker.getRegistrations().then(async (registrations) => {
@@ -19,37 +20,15 @@ if ('serviceWorker' in navigator) {
       }
     });
   } else {
-    const isLegalPage = window.location.pathname === '/privacy' || window.location.pathname === '/terms';
-
-    if (isLegalPage && navigator.serviceWorker.controller) {
-      // A stale worker can turn these server-rendered legal URLs into the SPA.
-      // Remove that worker and its caches, then retry the exact legal URL from
-      // the network. This runs only when an old worker already intercepted it.
-      void navigator.serviceWorker.getRegistrations().then(async (registrations) => {
-        await Promise.all(registrations.map((registration) => registration.unregister()));
-        if (typeof caches !== 'undefined') {
-          const names = await caches.keys();
-          await Promise.all(names.map((name) => caches.delete(name)));
-        }
-        window.location.replace(window.location.href);
-      });
-    } else {
-      let reloadingForUpdate = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (reloadingForUpdate) return;
-        reloadingForUpdate = true;
-        window.location.reload();
-      });
-
-      // Explicitly register the current worker and bypass the browser HTTP cache
-      // for worker updates so older installed WeatherNow PWAs migrate promptly.
-      void navigator.serviceWorker.register('/sw.js?v=4', {
-        scope: '/',
-        updateViaCache: 'none',
-      }).then((registration) => registration.update()).catch((error) => {
-        console.warn('WeatherNow service worker update failed:', error);
-      });
-    }
+    let reloadingForUpdate = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloadingForUpdate) return;
+      reloadingForUpdate = true;
+      window.location.reload();
+    });
+    void navigator.serviceWorker.getRegistrations().then((registrations) => {
+      for (const registration of registrations) void registration.update();
+    });
   }
 }
 
