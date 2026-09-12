@@ -733,6 +733,7 @@ export function PagasaTyphoonMap({ lat, lon, name, country = '', isExpanded, set
   const [himawariFullDiskFrameTime, setHimawariFullDiskFrameTime] = useState('');
   const [himawariFullDiskError, setHimawariFullDiskError] = useState('');
   const [rainViewerFramePath, setRainViewerFramePath] = useState('');
+  const [useDirectRainViewerTiles, setUseDirectRainViewerTiles] = useState(false);
   const [rainViewerError, setRainViewerError] = useState('');
   const [pagasaPosition, setPagasaPosition] = useState<LatLon | null>(null);
   const [pagasaStatus, setPagasaStatus] = useState('');
@@ -823,6 +824,7 @@ export function PagasaTyphoonMap({ lat, lon, name, country = '', isExpanded, set
         const frames = [...past, ...nowcast].filter(frame => typeof frame?.path === 'string');
         const newest = frames[frames.length - 1];
         setRainViewerFramePath(newest?.path || '');
+        setUseDirectRainViewerTiles(false);
         setRainViewerError(newest?.path ? '' : 'RainViewer backup has no current radar frame.');
       }).catch(() => {
         if (!controller.signal.aborted) {
@@ -918,12 +920,23 @@ export function PagasaTyphoonMap({ lat, lon, name, country = '', isExpanded, set
         <WhiteMapBoundaryLayer />
         {showHimawari && satelliteLon >= 65 && satelliteLon <= 180 && !himawariFullDiskTimeline && rainViewerFramePath && (
           <TileLayer
+            key={`${rainViewerFramePath}-${useDirectRainViewerTiles ? 'direct' : 'proxy'}`}
             attribution="RainViewer"
-            url={apiUrl(`/api/radar-tile?path=${encodeURIComponent(rainViewerFramePath)}&z={z}&x={x}&y={y}`)}
+            url={useDirectRainViewerTiles
+              ? `https://tilecache.rainviewer.com${rainViewerFramePath}/256/{z}/{x}/{y}/2/1_1.png`
+              : apiUrl(`/api/radar-tile?path=${encodeURIComponent(rainViewerFramePath)}&z={z}&x={x}&y={y}`)}
             opacity={0.72}
             zIndex={500}
             maxNativeZoom={7}
             maxZoom={10}
+            eventHandlers={{
+              tileerror: () => {
+                // Render deployments can occasionally time out while proxying the
+                // RainViewer CDN. Retry the same frame directly in the browser so
+                // mobile/tablet maps do not stay blank.
+                if (!useDirectRainViewerTiles) setUseDirectRainViewerTiles(true);
+              },
+            }}
           />
         )}
         {storms.map(storm => <React.Fragment key={storm.id}>
