@@ -1931,6 +1931,140 @@ app.get("/api/nhc-cyclones", async (_req, res) => {
     res.send(pagasaRadarCache.bytes);
   });
 
+  // Public legal pages for Google OAuth / WeatherNow.
+  // These routes are intentionally registered before Vite/static SPA handling so
+  // /privacy and /terms return real public HTML pages in both dev and production.
+  const renderLegalPage = (title: string, body: string) => `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>${title} | WeatherNow</title>
+  <style>
+    :root { color-scheme: light dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f8fafc; color: #0f172a; line-height: 1.65; }
+    main { width: min(900px, calc(100% - 32px)); margin: 40px auto; }
+    .card { background: #fff; border: 1px solid #cbd5e1; border-radius: 16px; padding: clamp(20px, 4vw, 36px); box-shadow: 0 12px 35px rgba(15,23,42,.08); }
+    h1 { margin: 0 0 4px; font-size: clamp(1.8rem, 4vw, 2.5rem); }
+    h2 { margin-top: 2rem; font-size: 1.15rem; }
+    p, li { font-size: .98rem; }
+    .meta { color: #64748b; margin: 0 0 1.75rem; }
+    a { color: #2563eb; }
+    nav { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid #e2e8f0; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #020617; color: #e2e8f0; }
+      .card { background: #0f172a; border-color: #334155; box-shadow: none; }
+      .meta { color: #94a3b8; }
+      a { color: #60a5fa; }
+      nav { border-color: #334155; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <article class="card">
+      ${body}
+      <nav aria-label="Legal and app links">
+        <a href="/">WeatherNow</a>
+        <a href="/privacy">Privacy Policy</a>
+        <a href="/terms">Terms of Service</a>
+      </nav>
+    </article>
+  </main>
+</body>
+</html>`;
+
+  app.get('/privacy', (_req, res) => {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.send(renderLegalPage('Privacy Policy', `
+      <h1>WeatherNow Privacy Policy</h1>
+      <p class="meta">Effective date: September 12, 2026</p>
+
+      <p>WeatherNow provides weather information, maps, forecasts, environmental information, news, calendar features, a personal weather journal, and optional media features. This Privacy Policy explains how information is handled when you use WeatherNow.</p>
+
+      <h2>Information you provide or authorize</h2>
+      <p>WeatherNow may process information you choose to provide, including saved locations, settings, journal entries, and photos you add to journal entries. When you choose to connect a Google account, WeatherNow requests access only for Google-integrated features that you initiate, such as Calendar access and journal-related synchronization.</p>
+
+      <h2>Google account information</h2>
+      <p>If you sign in with Google, WeatherNow may receive basic account information such as your email address and an OAuth access token needed to use the Google features you authorize. The dashboard uses that authorization to load Google Calendar information and to provide Google-connected journal functionality.</p>
+      <p>WeatherNow's use and transfer of information received from Google APIs will adhere to the Google API Services User Data Policy, including the Limited Use requirements.</p>
+
+      <h2>Calendar and journal data</h2>
+      <p>Calendar information is used to display events and calendar sources inside WeatherNow. Journal information is used to provide the personal weather journal and, when Google-connected features are enabled, to support synchronization or backup functionality initiated by you.</p>
+
+      <h2>Location information</h2>
+      <p>If you allow device location access, WeatherNow uses your coordinates to provide local weather, forecasts, maps, environmental information, and nearby or location-based results. You can also search for or select locations manually.</p>
+
+      <h2>Local browser storage</h2>
+      <p>WeatherNow uses browser storage for app settings, saved locations, cached weather or environmental information, installation state, and other data needed to keep the dashboard working between sessions. Clearing browser or site data may remove locally stored information.</p>
+
+      <h2>Third-party services</h2>
+      <p>WeatherNow retrieves information or functionality from third-party services used by the dashboard, which may include Google services, Open-Meteo, OpenStreetMap-related services, weather agencies, satellite/radar providers, YouTube, and news publishers. Those providers may process requests under their own privacy policies and terms.</p>
+
+      <h2>Sharing and sale of personal information</h2>
+      <p>WeatherNow does not sell your personal information. Information is shared with third-party providers only as needed to provide features you request or when required by law.</p>
+
+      <h2>Data retention and control</h2>
+      <p>You can disconnect your Google account from WeatherNow by signing out. You can also remove WeatherNow's Google account access from your Google Account permissions. Locally stored dashboard data can be removed by clearing the site's browser storage. Data stored in your own Google account remains subject to Google's controls and retention settings.</p>
+
+      <h2>Security</h2>
+      <p>WeatherNow uses standard browser security mechanisms and HTTPS when deployed securely. No internet service can guarantee absolute security, so users should avoid placing highly sensitive information in journal entries.</p>
+
+      <h2>Children</h2>
+      <p>WeatherNow is not intended to knowingly collect personal information from children in violation of applicable law.</p>
+
+      <h2>Changes to this policy</h2>
+      <p>This Privacy Policy may be updated as WeatherNow features or legal requirements change. The effective date above will be updated when material changes are made.</p>
+
+      <h2>Contact</h2>
+      <p>For privacy questions about WeatherNow, contact the developer through the <a href="https://github.com/unknownjed/WeatherNow" rel="noopener noreferrer">WeatherNow GitHub repository</a>.</p>
+    `));
+  });
+
+  app.get('/terms', (_req, res) => {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.send(renderLegalPage('Terms of Service', `
+      <h1>WeatherNow Terms of Service</h1>
+      <p class="meta">Effective date: September 12, 2026</p>
+
+      <p>These Terms of Service govern your use of WeatherNow. By using WeatherNow, you agree to these terms.</p>
+
+      <h2>Weather and environmental information</h2>
+      <p>WeatherNow combines information from external weather, environmental, mapping, satellite, radar, and related providers. Forecasts and observations may be delayed, incomplete, unavailable, or inaccurate. WeatherNow is provided for general informational purposes and must not be treated as an official emergency, aviation, marine-navigation, medical, or life-safety service.</p>
+
+      <h2>Google-connected features</h2>
+      <p>Google Calendar and other Google-connected functionality is optional. By connecting a Google account, you authorize WeatherNow to use the permissions you approve for the features you choose to use. You remain responsible for your Google account and may revoke WeatherNow's access through your Google Account settings.</p>
+
+      <h2>Journal and user content</h2>
+      <p>You are responsible for journal text, photos, locations, and other content you add to WeatherNow. Do not upload content you do not have the right to use. You are responsible for maintaining any backups you consider important.</p>
+
+      <h2>Third-party services and content</h2>
+      <p>WeatherNow may display or link to information from third parties, including weather providers, map services, news publishers, Google services, YouTube, and other data providers. Their services, content, availability, and policies are controlled by those providers, not WeatherNow.</p>
+
+      <h2>Acceptable use</h2>
+      <p>You may not use WeatherNow to violate applicable law, interfere with the service, attempt unauthorized access to accounts or systems, abuse third-party APIs, or misuse content supplied by third-party providers.</p>
+
+      <h2>Availability and changes</h2>
+      <p>WeatherNow may change, suspend, or discontinue features when providers, APIs, technical requirements, or project needs change. Continuous availability is not guaranteed.</p>
+
+      <h2>No warranties</h2>
+      <p>WeatherNow is provided on an "as is" and "as available" basis without warranties of uninterrupted operation, error-free data, forecast accuracy, or fitness for a particular purpose, to the extent permitted by applicable law.</p>
+
+      <h2>Limitation of liability</h2>
+      <p>To the extent permitted by applicable law, the developer of WeatherNow is not liable for losses resulting from reliance on weather information, provider outages, unavailable features, lost locally stored data, third-party content, or use of the service.</p>
+
+      <h2>Changes to these terms</h2>
+      <p>These Terms may be updated as WeatherNow changes. Continued use after an updated version is published constitutes acceptance of the revised Terms to the extent permitted by applicable law.</p>
+
+      <h2>Contact</h2>
+      <p>Questions about these Terms can be raised through the <a href="https://github.com/unknownjed/WeatherNow" rel="noopener noreferrer">WeatherNow GitHub repository</a>.</p>
+    `));
+  });
+
   // Vite middleware for development.
   // npm sets npm_lifecycle_event automatically. Treat the explicit dev scripts
   // as development even if a stale .env file contains NODE_ENV=production.
