@@ -268,17 +268,43 @@ export async function getMarineData(lat: number, lon: number) {
     ].some(Number.isFinite);
   };
 
+  const variables =
+    'wave_height,wave_direction,wave_period,sea_surface_temperature,ocean_current_velocity,ocean_current_direction';
+
   const load = async (probeLat: number, probeLon: number) => {
     const url =
       `https://marine-api.open-meteo.com/v1/marine?latitude=${probeLat}&longitude=${probeLon}` +
-      `&current=wave_height,wave_direction,wave_period,sea_surface_temperature,ocean_current_velocity,ocean_current_direction` +
-      `&cell_selection=sea&timezone=auto`;
+      `&current=${variables}&cell_selection=sea&timezone=auto`;
 
     try {
       const response = await fetchWithTimeout(url, {}, 9000);
       if (!response.ok) return null;
       const data = await response.json() as MarineData;
       return hasUsableMarine(data) ? data : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const loadBatch = async (coordinates: Array<[number, number]>) => {
+    if (!coordinates.length) return null;
+
+    const latitudes = coordinates.map(([probeLat]) => probeLat).join(',');
+    const longitudes = coordinates.map(([, probeLon]) => probeLon).join(',');
+    const url =
+      `https://marine-api.open-meteo.com/v1/marine?latitude=${latitudes}&longitude=${longitudes}` +
+      `&current=${variables}&cell_selection=sea`;
+
+    try {
+      const response = await fetchWithTimeout(url, {}, 12000);
+      if (!response.ok) return null;
+
+      const payload = await response.json() as MarineData | MarineData[];
+      const results = Array.isArray(payload) ? payload : [payload];
+
+      // Coordinates are sent nearest-first within each radius, so use the first
+      // usable sea-grid response returned by Open-Meteo.
+      return results.find(hasUsableMarine) || null;
     } catch {
       return null;
     }
@@ -291,27 +317,29 @@ export async function getMarineData(lat: number, lon: number) {
     return direct;
   }
 
-  // For inland cities, Open-Meteo can still return no current marine values
-  // even with cell_selection=sea. Probe nearby coordinates outward until a
-  // real sea grid is found. This keeps marine data aligned with the selected
-  // country/city instead of showing nothing.
-  const rings = [0.5, 1, 2, 3, 4, 6];
+  // Inland locations anywhere in the world can return no current marine values
+  // even with cell_selection=sea. Probe nearby sea candidates in ONE batched
+  // Open-Meteo request per radius instead of firing many requests at once.
+  // The wider global rings and extra bearings cover inland/landlocked locations
+  // across Europe, Asia, Africa, North/South America and Oceania.
+  const rings = [0.5, 1, 1.5, 2, 3, 4, 5, 6, 8, 10, 12, 15, 18, 22];
   const directions = [
     [1, 0], [-1, 0], [0, 1], [0, -1],
     [1, 1], [1, -1], [-1, 1], [-1, -1],
+    [0.5, 1], [0.5, -1], [-0.5, 1], [-0.5, -1],
+    [1, 0.5], [1, -0.5], [-1, 0.5], [-1, -0.5],
   ];
 
   for (const radius of rings) {
-    const probes = directions.map(([dLat, dLon]) => {
+    const lonScale = Math.max(0.25, Math.cos(lat * Math.PI / 180));
+    const coordinates = directions.map(([dLat, dLon]) => {
       const probeLat = Math.max(-89.5, Math.min(89.5, lat + dLat * radius));
-      const lonScale = Math.max(0.25, Math.cos(lat * Math.PI / 180));
       const probeLonRaw = lon + (dLon * radius) / lonScale;
       const probeLon = ((probeLonRaw + 540) % 360) - 180;
-      return load(probeLat, probeLon);
+      return [probeLat, probeLon] as [number, number];
     });
 
-    const results = await Promise.all(probes);
-    const found = results.find(hasUsableMarine) || null;
+    const found = await loadBatch(coordinates);
     if (found) {
       try { localStorage.setItem(key, JSON.stringify({ savedAt: Date.now(), data: found })); } catch {}
       return found;
