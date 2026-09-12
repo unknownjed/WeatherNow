@@ -837,3 +837,12 @@ html.dark #root .settings-panel #settings-install-app-btn.bg-emerald-600:active 
     inset 0 0 18px rgba(16, 185, 129, 0.62) !important;
 }
 
+
+
+/* Dark mode only: weekday header cells stay light, so use dark text for visibility. */
+html.dark #root .google-calendar-panel .fc-col-header-cell,
+html.dark #root .google-calendar-panel .fc-col-header-cell-cushion {
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+  font-weight: 700 !important;
+}
