@@ -747,10 +747,10 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, setSetti
               <div className="rounded-lg border border-sky-200 !bg-white p-3 text-left dark:border-slate-700 dark:!bg-slate-950/70">
                 <div className="text-xs font-bold text-sky-950 dark:text-slate-200">{legalLabels.legal}</div>
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-[11px] font-semibold">
-                  <a href={`/privacy?lang=${legalLanguage}`} target="_blank" rel="noopener noreferrer" className="text-blue-700 underline underline-offset-2 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300">
+                  <a href={`/privacy?lang=${legalLanguage}`} className="text-blue-700 underline underline-offset-2 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300">
                     {legalLabels.privacy}
                   </a>
-                  <a href={`/terms?lang=${legalLanguage}`} target="_blank" rel="noopener noreferrer" className="text-blue-700 underline underline-offset-2 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300">
+                  <a href={`/terms?lang=${legalLanguage}`} className="text-blue-700 underline underline-offset-2 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300">
                     {legalLabels.terms}
                   </a>
                 </div>
