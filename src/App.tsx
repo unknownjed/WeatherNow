@@ -10,21 +10,24 @@ import { HistoricalChart } from './components/HistoricalChart';
 import { FiveDayForecast } from './components/FiveDayForecast';
 import { HourlyForecast } from './components/HourlyForecast';
 import { WeatherMap } from './components/WeatherMap';
-import { NewsFeed } from './components/NewsFeed';
 import { useTranslation, getDateLocale } from './lib/i18n';
-import { SettingsPanel } from './components/SettingsPanel';
 import { WeatherForecaster } from './components/WeatherForecaster';
 import { AppLogo } from './components/AppLogo';
-import { MusicWidget } from './components/MusicWidget';
 import { EnvironmentalPanels } from './components/EnvironmentalPanels';
-import { WeatherJournal } from './components/WeatherJournal';
 import { format } from 'date-fns';
 import { listEvents } from './lib/googleCalendarApi';
-import GoogleCalendarPanel from './components/GoogleCalendarPanel';
 import { InstallAppDialog } from './components/InstallAppDialog';
 import type { CalendarAgendaItem } from './lib/calendarAgenda';
 import { createOverlayBack } from './lib/overlayBack';
 import { isPhilippineLocation } from './lib/forecastSource';
+
+// Keep non-startup sections out of the initial dashboard bundle. These chunks
+// are downloaded only when the user first opens the corresponding feature.
+const LazyNewsFeed = React.lazy(() => import('./components/NewsFeed').then((module) => ({ default: module.NewsFeed })));
+const LazySettingsPanel = React.lazy(() => import('./components/SettingsPanel').then((module) => ({ default: module.SettingsPanel })));
+const LazyMusicWidget = React.lazy(() => import('./components/MusicWidget').then((module) => ({ default: module.MusicWidget })));
+const LazyWeatherJournal = React.lazy(() => import('./components/WeatherJournal').then((module) => ({ default: module.WeatherJournal })));
+const LazyGoogleCalendarPanel = React.lazy(() => import('./components/GoogleCalendarPanel'));
 
 const isStandaloneWindow = () => Boolean(
   window.matchMedia('(display-mode: standalone)').matches
@@ -59,6 +62,7 @@ export default function App() {
   const citySearchCache = useRef(new Map<string, Location[]>());
   const [isMapFullscreen, setIsMapFullscreen] = useState(false);
   const [musicOverlayOpen, setMusicOverlayOpen] = useState(false);
+  const [musicWidgetLoaded, setMusicWidgetLoaded] = useState(false);
   const [musicPlaying, setMusicPlaying] = useState(false);
   const [musicSessionActive, setMusicSessionActive] = useState(false);
   const [forecasterSpeaking, setForecasterSpeaking] = useState(false);
@@ -108,6 +112,7 @@ export default function App() {
       closeMusicOverlay();
       return;
     }
+    setMusicWidgetLoaded(true);
     if (isMusicBackEnabled()) {
       if (musicOverlayBack.current?.open(() => setMusicOverlayOpen(false))) setMusicOverlayOpen(true);
       return;
@@ -1248,7 +1253,7 @@ export default function App() {
                   {loginError && <p role="alert" className="mt-2 text-rose-600 dark:text-rose-300">{loginError}</p>}
                 </div>}
                 <div className="min-h-0 flex-1">
-                  <GoogleCalendarPanel token={isOnline ? token : null} country={location.country} language={settings.language} selectedJournalDate={calendarDate} onDateSelected={chooseDate} journalDates={journalDates} onAgendaChange={setCalendarAgenda} />
+                  <React.Suspense fallback={null}><LazyGoogleCalendarPanel token={isOnline ? token : null} country={location.country} language={settings.language} selectedJournalDate={calendarDate} onDateSelected={chooseDate} journalDates={journalDates} onAgendaChange={setCalendarAgenda} /></React.Suspense>
                 </div>
               </div>
             ) : (
@@ -1282,14 +1287,14 @@ export default function App() {
               </div>}
               </div>
               <div className="min-h-0 overflow-visible xl:col-span-6 xl:h-full xl:overflow-hidden xl:[&>aside]:!h-full xl:[&>aside]:!max-h-full">
-                <WeatherJournal locationName={location.name} language={settings.language} accountLinked={Boolean(user)} googleAccessToken={token} selectedDate={calendarDate} onDatesChange={setJournalDates} />
+                <React.Suspense fallback={null}><LazyWeatherJournal locationName={location.name} language={settings.language} accountLinked={Boolean(user)} googleAccessToken={token} selectedDate={calendarDate} onDatesChange={setJournalDates} /></React.Suspense>
               </div>
             </div>
           </section>
         ) : activeTab === 'news' ? (
-          <NewsFeed locationName={location.name} country={location.country} language={settings.language} />
+          <React.Suspense fallback={null}><LazyNewsFeed locationName={location.name} country={location.country} language={settings.language} /></React.Suspense>
         ) : activeTab === 'settings' ? (
-          <SettingsPanel 
+          <React.Suspense fallback={null}><LazySettingsPanel 
             onInstallApp={handleInstallClick}
             isInstalled={isInstalled}
             settings={settings} 
@@ -1298,14 +1303,18 @@ export default function App() {
             onLogin={handleLogin} 
             onLogout={handleLogout} 
             currentLocation={location} 
-          />
+          /></React.Suspense>
         ) : null}
         </>
       </main>
 
-      <div inert={!musicOverlayOpen} aria-hidden={!musicOverlayOpen} className={`music-player-overlay ${musicOverlayOpen ? '' : 'music-player-overlay-hidden'}`}>
-        <MusicWidget language={settings.language} onHide={() => closeMusicOverlay()} />
-      </div>
+      {musicWidgetLoaded && (
+        <div inert={!musicOverlayOpen} aria-hidden={!musicOverlayOpen} className={`music-player-overlay ${musicOverlayOpen ? '' : 'music-player-overlay-hidden'}`}>
+          <React.Suspense fallback={null}>
+            <LazyMusicWidget language={settings.language} onHide={() => closeMusicOverlay()} />
+          </React.Suspense>
+        </div>
+      )}
 
       {/* Mobile Bottom Navigation */}
       <nav onClickCapture={(event) => { if (!(event.target as HTMLElement).closest('.music-nav-icon')) closeMusicOverlay(); }} className="mobile-bottom-nav md:hidden flex-none bg-sky-50 dark:bg-slate-900 border-t border-sky-200 dark:border-slate-800 flex justify-around items-center h-16 z-20 pb-safe">
