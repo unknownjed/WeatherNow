@@ -324,15 +324,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, setSetti
 
   const openLegalPage = async (path: 'privacy' | 'terms') => {
     const url = `/api/legal/${path}?lang=${legalLanguage}`;
-    const isStandaloneApp =
-      window.matchMedia?.('(display-mode: standalone)').matches === true ||
-      (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
-
-    // Open synchronously from the user's click so popup blockers allow it.
-    // Browser mode requests a separate window; installed/PWA mode uses a new tab/window.
-    const legalWindow = isStandaloneApp
-      ? window.open('', '_blank')
-      : window.open('', '_blank', 'popup=yes,width=920,height=760,resizable=yes,scrollbars=yes');
+    // Open synchronously from the user's click in a normal new browser tab.
+    // Do not request popup/window dimensions, because those can force a separate window.
+    const legalWindow = window.open('', '_blank');
 
     if (!legalWindow) {
       // If the browser blocks the requested window, keep the verified legal URL usable.
