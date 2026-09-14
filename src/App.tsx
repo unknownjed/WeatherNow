@@ -885,7 +885,7 @@ export default function App() {
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sky-800 dark:text-slate-400" size={14} />
               <input 
                 type="text" 
-                placeholder="Search cities..." 
+                placeholder={alertUi.searchCities} 
                 className="w-full pl-9 pr-3 py-2 !bg-white dark:!bg-slate-950 border border-sky-200 dark:border-slate-800 rounded-lg text-sm text-sky-950 dark:text-slate-200 placeholder-slate-500 focus:outline-none focus:border-white focus:ring-1 focus:ring-white focus:shadow-none dark:focus:border-indigo-500 dark:focus:ring-1 dark:focus:ring-indigo-500 transition-all"
                 value={query}
                 onChange={(e) => {
@@ -904,7 +904,7 @@ export default function App() {
               <div className="header-city-results absolute top-full right-0 mt-2 w-72 max-sm:left-0 max-sm:right-auto max-sm:w-[calc(100vw-1rem)] sm:w-80 md:w-96 bg-white dark:bg-slate-900 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-sky-300 dark:border-slate-700 overflow-y-auto overflow-x-hidden z-[10001] max-h-80 divide-y divide-sky-100 dark:divide-slate-800">
                 {searchResults.length === 0 && (
                   <p role="status" className="px-3.5 py-2.5 text-sm text-black dark:text-slate-200">
-                    {citySearchLoading ? 'Searching cities...' : citySearchError ? 'City search unavailable. Please try again.' : 'No matching cities found.'}
+                    {citySearchLoading ? alertUi.searchingCities : citySearchError ? alertUi.citySearchUnavailable : alertUi.noMatchingCities}
                   </p>
                 )}
                 {searchResults.map((res) => (
