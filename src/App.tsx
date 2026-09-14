@@ -629,7 +629,7 @@ export default function App() {
           const lon = position.coords.longitude;
           const offlineGpsLocation: Location = {
             id: Math.round((lat + 90) * 1000000 + (lon + 180) * 1000),
-            name: 'Current Location',
+            name: `${lat.toFixed(4)}, ${lon.toFixed(4)}`,
             latitude: lat,
             longitude: lon,
             country: navigator.onLine ? 'Locating...' : 'Offline GPS',
@@ -647,7 +647,7 @@ export default function App() {
         (error) => {
           console.log("Geolocation info:", error.message);
         },
-        { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
+        { enableHighAccuracy: window.matchMedia('(max-width: 1199px)').matches, timeout: 15000, maximumAge: 60000 }
       );
     }
   };
@@ -680,7 +680,7 @@ export default function App() {
       // hourly, 5-day, air quality and marine all refresh from the same point.
       const gpsLocation: Location = {
         id: Math.round((lat + 90) * 1000000 + (lon + 180) * 1000),
-        name: 'Current Location',
+        name: `${lat.toFixed(4)}, ${lon.toFixed(4)}`,
         latitude: lat,
         longitude: lon,
         country: '',
@@ -696,7 +696,7 @@ export default function App() {
       // Do not wait for this before refreshing the forecasts.
       try {
         const resolved = await reverseGeocode(lat, lon);
-        if (!disposed && resolved) {
+        if (!disposed && resolved && (resolved.name !== 'Current Location' || resolved.country)) {
           setLocation({
             ...resolved,
             latitude: lat,

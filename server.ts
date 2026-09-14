@@ -3410,30 +3410,37 @@ app.get("/api/nhc-cyclones", async (_req, res) => {
     ${renderLegalDocument(doc, labels)}
     <nav aria-label="${escapeLegalHtml(labels.legalNav)}">
       <a href="/">WeatherNow</a>
-      <a href="/privacy?lang=${lang}">${escapeLegalHtml(labels.privacyLabel)}</a>
-      <a href="/terms?lang=${lang}">${escapeLegalHtml(labels.termsLabel)}</a>
+      <a href="/api/legal/privacy?lang=${lang}">${escapeLegalHtml(labels.privacyLabel)}</a>
+      <a href="/api/legal/terms?lang=${lang}">${escapeLegalHtml(labels.termsLabel)}</a>
     </nav>
   </article></main>
 </body>
 </html>`;
 
-  app.get('/privacy', (req, res) => {
+  const sendPrivacyPage = (req: any, res: any) => {
     const lang = legalLanguage(req.query.lang);
     const labels = legalContent[lang];
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Content-Language', lang);
     res.send(renderLegalPage(lang, labels.privacy, labels));
-  });
+  };
 
-  app.get('/terms', (req, res) => {
+  const sendTermsPage = (req: any, res: any) => {
     const lang = legalLanguage(req.query.lang);
     const labels = legalContent[lang];
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Content-Language', lang);
     res.send(renderLegalPage(lang, labels.terms, labels));
-  });
+  };
+
+  // Keep the public legal URLs, and expose API-prefixed aliases so installed
+  // PWAs/service workers cannot replace legal-page navigation with index.html.
+  app.get('/privacy', sendPrivacyPage);
+  app.get('/terms', sendTermsPage);
+  app.get('/api/legal/privacy', sendPrivacyPage);
+  app.get('/api/legal/terms', sendTermsPage);
 
   // Vite middleware for development.
   // npm sets npm_lifecycle_event automatically. Treat the explicit dev scripts
