@@ -72,8 +72,8 @@ export function EnvironmentalPanels({ lat, lon, settings, onMarineData }: Props)
 
   return (
     <div className="environmental-panels grid grid-cols-1 gap-4 break-words" dir={settings.language === 'ar' ? 'rtl' : 'ltr'}>
-      <div className="rounded-xl border border-sky-200 bg-sky-50 p-2 pb-4 shadow-inner dark:border-slate-800 dark:bg-slate-900">
-        <h3 className="mb-3 px-2 pt-1 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-sky-900 dark:text-slate-300"><Activity size={15} className="text-emerald-500" />{t('airQualityUv')}</h3>
+      <div className="rounded-xl border border-sky-200 bg-sky-50 p-2 shadow-inner dark:border-slate-800 dark:bg-slate-900">
+        <h3 className="mb-3 px-2 pt-1 flex items-center gap-2 text-[10px] lg:text-xs font-bold uppercase tracking-widest text-sky-800 dark:text-slate-400"><Activity size={15} className="text-emerald-500" />{t('airQualityUv')}</h3>
         {loading ? <p className="text-xs text-sky-700 dark:text-slate-400">{t('environmentalLoading')}</p> : (
           <div className="grid grid-cols-2 auto-rows-fr gap-2 text-xs">
             <div className="rounded-lg bg-white p-1 dark:bg-slate-800"><span data-weather-accent="environment-label" className="env-metric-label block text-[10px] uppercase text-blue-600 dark:text-slate-400">{t('usAqi')}</span><div className="flex items-baseline gap-2"><strong className="text-lg">{value(airNow?.us_aqi)}</strong><span className="min-w-0 text-[10px] font-bold text-slate-500">{t(aqiLabel(airNow?.us_aqi))}</span></div></div>
@@ -84,8 +84,8 @@ export function EnvironmentalPanels({ lat, lon, settings, onMarineData }: Props)
         )}
       </div>
 
-      <div className="rounded-xl border border-sky-200 bg-sky-50 p-2 pb-4 shadow-inner dark:border-slate-800 dark:bg-slate-900">
-        <h3 className="mb-3 px-2 pt-1 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-sky-900 dark:text-slate-300"><Waves size={15} className="text-blue-500" />{t('marineConditions')}</h3>
+      <div className="rounded-xl border border-sky-200 bg-sky-50 p-2 shadow-inner dark:border-slate-800 dark:bg-slate-900">
+        <h3 className="mb-3 px-2 pt-1 flex items-center gap-2 text-[10px] lg:text-xs font-bold uppercase tracking-widest text-sky-800 dark:text-slate-400"><Waves size={15} className="text-blue-500" />{t('marineConditions')}</h3>
         {loading ? <p className="text-xs text-sky-700 dark:text-slate-400">{t('marineLoading')}</p> : hasMarine ? (
           <div className="grid grid-cols-2 auto-rows-fr gap-2 text-xs">
             <div className="rounded-lg bg-white p-1 dark:bg-slate-800"><span data-weather-accent="environment-label" className="env-metric-label block text-[10px] uppercase text-blue-600 dark:text-slate-400">{t('waveHeight')}</span><strong className="marine-metric-value text-lg">{metricValue(waveHeight, ' m')}</strong></div>
