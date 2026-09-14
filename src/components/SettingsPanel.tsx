@@ -324,16 +324,63 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, setSetti
 
   const openLegalPage = async (path: 'privacy' | 'terms') => {
     const url = `/api/legal/${path}?lang=${legalLanguage}`;
+    const isStandaloneApp =
+      window.matchMedia?.('(display-mode: standalone)').matches === true ||
+      (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+
+    // Open synchronously from the user's click so popup blockers allow it.
+    // Browser mode requests a separate window; installed/PWA mode uses a new tab/window.
+    const legalWindow = isStandaloneApp
+      ? window.open('', '_blank')
+      : window.open('', '_blank', 'popup=yes,width=920,height=760,resizable=yes,scrollbars=yes');
+
+    if (!legalWindow) {
+      // If the browser blocks the requested window, keep the verified legal URL usable.
+      window.open(url, '_blank');
+      return;
+    }
+
     try {
       const response = await fetch(url, { cache: 'no-store' });
       if (!response.ok) throw new Error(`Legal page request failed: ${response.status}`);
       const html = await response.text();
-      window.history.pushState(null, '', url);
-      document.open();
-      document.write(html);
-      document.close();
+      const absoluteUrl = new URL(url, window.location.href).href;
+      const returnScript = `
+<script>
+(function () {
+  var openerAvailable = !!(window.opener && !window.opener.closed);
+  var returnToSettings = function () {
+    if (openerAvailable) {
+      window.close();
+      if (!window.closed && window.opener) window.opener.focus();
+      return;
+    }
+    if (history.length > 1) history.back();
+    else location.href = '/';
+  };
+
+  var closeButton = document.querySelector('.close-button');
+  if (closeButton) closeButton.onclick = returnToSettings;
+
+  if (openerAvailable) {
+    try {
+      history.replaceState({ weatherNowLegalBase: true }, '', ${JSON.stringify(absoluteUrl)});
+      history.pushState({ weatherNowLegalOpen: true }, '', ${JSON.stringify(absoluteUrl)});
+      window.addEventListener('popstate', function () {
+        window.close();
+        if (!window.closed && window.opener) window.opener.focus();
+      }, { once: true });
+    } catch (_) {}
+  }
+})();
+<\/script>`;
+
+      legalWindow.document.open();
+      legalWindow.document.write(html.replace('</body>', `${returnScript}</body>`));
+      legalWindow.document.close();
+      legalWindow.focus();
     } catch {
-      window.location.assign(url);
+      legalWindow.location.replace(url);
     }
   };
 
