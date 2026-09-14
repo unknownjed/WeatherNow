@@ -7,6 +7,19 @@ import { Download, X, Info, ChevronDown, HelpCircle } from 'lucide-react';
 import { AppLogo } from './AppLogo';
 
 const DASHBOARD_VERSION = '1.0.0';
+
+const LEGAL_LABELS: Record<string, { legal: string; privacy: string; terms: string }> = {
+  en: { legal: 'Legal', privacy: 'Privacy Policy', terms: 'Terms of Service' },
+  es: { legal: 'Legal', privacy: 'Política de privacidad', terms: 'Términos del servicio' },
+  fr: { legal: 'Mentions légales', privacy: 'Politique de confidentialité', terms: "Conditions d’utilisation" },
+  de: { legal: 'Rechtliches', privacy: 'Datenschutzerklärung', terms: 'Nutzungsbedingungen' },
+  zh: { legal: '法律信息', privacy: '隐私政策', terms: '服务条款' },
+  ja: { legal: '法的情報', privacy: 'プライバシーポリシー', terms: '利用規約' },
+  ar: { legal: 'قانوني', privacy: 'سياسة الخصوصية', terms: 'شروط الخدمة' },
+  ko: { legal: '법적 고지', privacy: '개인정보 처리방침', terms: '서비스 약관' },
+  ru: { legal: 'Правовая информация', privacy: 'Политика конфиденциальности', terms: 'Условия использования' },
+};
+
 const ABOUT_LABELS: Record<string, { about: string; by: string; version: string }> = {
   en: { about: 'About', by: 'By', version: 'Version' }, es: { about: 'Acerca de', by: 'Por', version: 'Versión' },
   fr: { about: 'À propos', by: 'Par', version: 'Version' }, de: { about: 'Über', by: 'Von', version: 'Version' },
@@ -306,6 +319,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, setSetti
   const aboutLabels = ABOUT_LABELS[settings.language] || ABOUT_LABELS.en;
   const aboutDetails = ABOUT_DETAILS[settings.language] || ABOUT_DETAILS.en;
   const helpLabels = HELP_LABELS[settings.language] || HELP_LABELS.en;
+  const legalLabels = LEGAL_LABELS[settings.language] || LEGAL_LABELS.en;
+  const legalLanguage = encodeURIComponent(settings.language || 'en');
 
   const handleSaveCurrentLocation = () => {
     const isSaved = settings.savedLocations.some(l => l.id === currentLocation.id);
@@ -730,13 +745,13 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, setSetti
               </div>
 
               <div className="rounded-lg border border-sky-200 !bg-white p-3 text-left dark:border-slate-700 dark:!bg-slate-950/70">
-                <div className="text-xs font-bold text-sky-950 dark:text-slate-200">Legal</div>
+                <div className="text-xs font-bold text-sky-950 dark:text-slate-200">{legalLabels.legal}</div>
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-[11px] font-semibold">
-                  <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-700 underline underline-offset-2 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300">
-                    Privacy Policy
+                  <a href={`/privacy?lang=${legalLanguage}`} target="_blank" rel="noopener noreferrer" className="text-blue-700 underline underline-offset-2 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300">
+                    {legalLabels.privacy}
                   </a>
-                  <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-blue-700 underline underline-offset-2 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300">
-                    Terms of Service
+                  <a href={`/terms?lang=${legalLanguage}`} target="_blank" rel="noopener noreferrer" className="text-blue-700 underline underline-offset-2 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300">
+                    {legalLabels.terms}
                   </a>
                 </div>
               </div>

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Search, MapPin, Wind, Droplets, Thermometer, AlertTriangle, Calendar, Clock, Settings, CloudRain, Maximize, Minimize, CalendarDays, LogOut, Video, Newspaper, CloudSun, LocateFixed, Download, X, Music2 } from 'lucide-react';
 import { getWeatherData, getHistoricalData, searchLocations, reverseGeocode, Location, getWeatherDescription, AppSettings, defaultSettings } from './lib/api';
-import { getUiLabels, getMapUiLabels } from './lib/uiLabels';
+import { getUiLabels, getMapUiLabels, translatePagasaOutlookText } from './lib/uiLabels';
 import { initAuth, googleSignIn, logout, getAccessToken, CalendarUser } from './lib/auth';
 import { getUpcomingEvents, getGoogleCalendarSources, getHolidayCalendarId, CalendarEvent } from './lib/calendar';
 import { WeatherIcon } from './components/WeatherIcon';
@@ -824,99 +824,7 @@ export default function App() {
   const alertUi = getUiLabels(settings.language);
   const alertMapUi = getMapUiLabels(settings.language);
 
-  const translatePagasaAlertDescription = (description: string) => {
-    const raw = String(description || '').trim();
-    if (!raw || settings.language === 'en') return raw;
-
-    const normalized = raw
-      .toLowerCase()
-      .replace(/\s+/g, ' ')
-      .replace(/[.]+$/, '');
-
-    const exact: Record<string, Record<string, string>> = {
-      es: {
-        'cloudy skies with rainshowers and thunderstorm': 'Cielos nublados con chubascos y tormentas eléctricas',
-        'cloudy skies with rainshowers and thunderstorms': 'Cielos nublados con chubascos y tormentas eléctricas',
-        'cloudy skies with scattered rains and thunderstorms': 'Cielos nublados con lluvias dispersas y tormentas eléctricas',
-        'cloudy skies with rains and thunderstorms': 'Cielos nublados con lluvias y tormentas eléctricas',
-        'partly cloudy to cloudy skies with isolated rainshowers or thunderstorms': 'Cielos parcialmente nublados a nublados con chubascos o tormentas eléctricas aisladas',
-        'partly cloudy to cloudy skies with isolated rainshowers and thunderstorms': 'Cielos parcialmente nublados a nublados con chubascos y tormentas eléctricas aisladas',
-      },
-      fr: {
-        'cloudy skies with rainshowers and thunderstorm': 'Ciel couvert avec averses et orages',
-        'cloudy skies with rainshowers and thunderstorms': 'Ciel couvert avec averses et orages',
-        'cloudy skies with scattered rains and thunderstorms': 'Ciel couvert avec pluies éparses et orages',
-        'cloudy skies with rains and thunderstorms': 'Ciel couvert avec pluies et orages',
-        'partly cloudy to cloudy skies with isolated rainshowers or thunderstorms': 'Ciel partiellement nuageux à couvert avec averses ou orages isolés',
-      },
-      de: {
-        'cloudy skies with rainshowers and thunderstorm': 'Bewölkter Himmel mit Regenschauern und Gewittern',
-        'cloudy skies with rainshowers and thunderstorms': 'Bewölkter Himmel mit Regenschauern und Gewittern',
-        'cloudy skies with scattered rains and thunderstorms': 'Bewölkter Himmel mit vereinzeltem Regen und Gewittern',
-        'cloudy skies with rains and thunderstorms': 'Bewölkter Himmel mit Regen und Gewittern',
-        'partly cloudy to cloudy skies with isolated rainshowers or thunderstorms': 'Teilweise bewölkt bis bewölkt mit vereinzelten Regenschauern oder Gewittern',
-      },
-      it: {
-        'cloudy skies with rainshowers and thunderstorm': 'Cielo nuvoloso con rovesci e temporali',
-        'cloudy skies with rainshowers and thunderstorms': 'Cielo nuvoloso con rovesci e temporali',
-        'cloudy skies with scattered rains and thunderstorms': 'Cielo nuvoloso con piogge sparse e temporali',
-        'cloudy skies with rains and thunderstorms': 'Cielo nuvoloso con piogge e temporali',
-        'partly cloudy to cloudy skies with isolated rainshowers or thunderstorms': 'Cielo da parzialmente nuvoloso a nuvoloso con rovesci o temporali isolati',
-      },
-      pt: {
-        'cloudy skies with rainshowers and thunderstorm': 'Céu nublado com pancadas de chuva e trovoadas',
-        'cloudy skies with rainshowers and thunderstorms': 'Céu nublado com pancadas de chuva e trovoadas',
-        'cloudy skies with scattered rains and thunderstorms': 'Céu nublado com chuvas dispersas e trovoadas',
-        'cloudy skies with rains and thunderstorms': 'Céu nublado com chuvas e trovoadas',
-        'partly cloudy to cloudy skies with isolated rainshowers or thunderstorms': 'Céu parcialmente nublado a nublado com pancadas de chuva ou trovoadas isoladas',
-      },
-      ja: {
-        'cloudy skies with rainshowers and thunderstorm': '曇りでにわか雨や雷雨',
-        'cloudy skies with rainshowers and thunderstorms': '曇りでにわか雨や雷雨',
-        'cloudy skies with scattered rains and thunderstorms': '曇りで所により雨や雷雨',
-        'cloudy skies with rains and thunderstorms': '曇りで雨や雷雨',
-        'partly cloudy to cloudy skies with isolated rainshowers or thunderstorms': '晴れ間のある曇りから曇りで、所によりにわか雨または雷雨',
-      },
-      ko: {
-        'cloudy skies with rainshowers and thunderstorm': '흐리고 소나기와 뇌우',
-        'cloudy skies with rainshowers and thunderstorms': '흐리고 소나기와 뇌우',
-        'cloudy skies with scattered rains and thunderstorms': '흐리고 곳곳에 비와 뇌우',
-        'cloudy skies with rains and thunderstorms': '흐리고 비와 뇌우',
-        'partly cloudy to cloudy skies with isolated rainshowers or thunderstorms': '부분적으로 흐리거나 흐리고 일부 지역에 소나기 또는 뇌우',
-      },
-      zh: {
-        'cloudy skies with rainshowers and thunderstorm': '多云，有阵雨和雷暴',
-        'cloudy skies with rainshowers and thunderstorms': '多云，有阵雨和雷暴',
-        'cloudy skies with scattered rains and thunderstorms': '多云，有分散性降雨和雷暴',
-        'cloudy skies with rains and thunderstorms': '多云，有降雨和雷暴',
-        'partly cloudy to cloudy skies with isolated rainshowers or thunderstorms': '局部多云到多云，局地有阵雨或雷暴',
-      },
-      hi: {
-        'cloudy skies with rainshowers and thunderstorm': 'बादल छाए रहेंगे, बारिश की बौछारें और गरज-चमक के साथ तूफान',
-        'cloudy skies with rainshowers and thunderstorms': 'बादल छाए रहेंगे, बारिश की बौछारें और गरज-चमक के साथ तूफान',
-        'cloudy skies with scattered rains and thunderstorms': 'बादल छाए रहेंगे, छिटपुट बारिश और गरज-चमक के साथ तूफान',
-        'cloudy skies with rains and thunderstorms': 'बादल छाए रहेंगे, बारिश और गरज-चमक के साथ तूफान',
-        'partly cloudy to cloudy skies with isolated rainshowers or thunderstorms': 'आंशिक रूप से बादल से बादल छाए रहेंगे, कहीं-कहीं बारिश की बौछारें या गरज-चमक',
-      },
-      ru: {
-        'cloudy skies with rainshowers and thunderstorm': 'Облачно, ливни и грозы',
-        'cloudy skies with rainshowers and thunderstorms': 'Облачно, ливни и грозы',
-        'cloudy skies with scattered rains and thunderstorms': 'Облачно, местами дожди и грозы',
-        'cloudy skies with rains and thunderstorms': 'Облачно, дожди и грозы',
-        'partly cloudy to cloudy skies with isolated rainshowers or thunderstorms': 'Переменная облачность до облачной погоды, местами ливни или грозы',
-      },
-      ar: {
-        'cloudy skies with rainshowers and thunderstorm': 'سماء غائمة مع زخات مطر وعواصف رعدية',
-        'cloudy skies with rainshowers and thunderstorms': 'سماء غائمة مع زخات مطر وعواصف رعدية',
-        'cloudy skies with scattered rains and thunderstorms': 'سماء غائمة مع أمطار متفرقة وعواصف رعدية',
-        'cloudy skies with rains and thunderstorms': 'سماء غائمة مع أمطار وعواصف رعدية',
-        'partly cloudy to cloudy skies with isolated rainshowers or thunderstorms': 'سماء غائمة جزئيًا إلى غائمة مع زخات مطر أو عواصف رعدية متفرقة',
-      },
-    };
-
-    const lang = settings.language === 'pt-BR' ? 'pt' : settings.language === 'zh-CN' ? 'zh' : settings.language;
-    return exact[lang]?.[normalized] || raw;
-  };
+  const translatePagasaAlertDescription = (description: string) => translatePagasaOutlookText(description, settings.language);
 
   const alertDesc = isPhilippines
     ? (pagasaAlertSevere ? `${alertMapUi.pagasaOutlook}: ${translatePagasaAlertDescription(pagasaAlertDescription)}` : null)
@@ -930,7 +838,8 @@ export default function App() {
   const formatAlertEffective = (value: string) => {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return null;
-    return date.toLocaleString(undefined, {
+    const alertLocale = settings.language === 'zh' ? 'zh-CN' : settings.language === 'pt' ? 'pt-BR' : settings.language;
+    return date.toLocaleString(alertLocale, {
       weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
       hour: '2-digit', minute: '2-digit', hour12: settings.timeFormat !== '24h',
     });
@@ -938,7 +847,8 @@ export default function App() {
   const formatPagasaAlertDate = (value: string) => {
     const date = new Date(`${value}T00:00:00+08:00`);
     if (Number.isNaN(date.getTime())) return value;
-    return date.toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+    const alertLocale = settings.language === 'zh' ? 'zh-CN' : settings.language === 'pt' ? 'pt-BR' : settings.language;
+    return date.toLocaleDateString(alertLocale, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
   };
   const alertEffectiveLabel = alertEffectiveTime ? formatAlertEffective(alertEffectiveTime) : null;
 

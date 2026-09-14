@@ -2003,15 +2003,1389 @@ app.get("/api/nhc-cyclones", async (_req, res) => {
   });
 
   // Public legal pages for Google OAuth / WeatherNow.
-  // These routes are intentionally registered before Vite/static SPA handling so
-  // /privacy and /terms return real public HTML pages in both dev and production.
-  const renderLegalPage = (title: string, body: string) => `<!doctype html>
-<html lang="en">
+  // The Settings language is passed as ?lang= so these pages use the same
+  // language on desktop, tablet, and mobile. Direct public links default to English.
+  type LegalSection = { heading: string; paragraphs: string[] };
+  type LegalDocument = { title: string; heading: string; intro: string; sections: LegalSection[]; contactHeading: string; contactBefore: string; contactLink: string };
+  type LegalLanguageContent = { dir: 'ltr' | 'rtl'; close: string; closeTitle: string; legalNav: string; privacyLabel: string; termsLabel: string; effective: string; privacy: LegalDocument; terms: LegalDocument };
+  const legalContent = {
+  "en": {
+    "dir": "ltr",
+    "close": "Close and return to dashboard",
+    "closeTitle": "Close",
+    "legalNav": "Legal and app links",
+    "privacyLabel": "Privacy Policy",
+    "termsLabel": "Terms of Service",
+    "effective": "Effective date: September 12, 2026",
+    "privacy": {
+      "title": "Privacy Policy",
+      "heading": "WeatherNow Privacy Policy",
+      "intro": "WeatherNow provides weather information, maps, forecasts, environmental information, news, calendar features, a personal weather journal, and optional media features. This Privacy Policy explains how information is handled when you use WeatherNow.",
+      "sections": [
+        {
+          "heading": "Information you provide or authorize",
+          "paragraphs": [
+            "WeatherNow may process information you choose to provide, including saved locations, settings, journal entries, and photos you add to journal entries. When you choose to connect a Google account, WeatherNow requests access only for Google-integrated features that you initiate, such as Calendar access and journal-related synchronization."
+          ]
+        },
+        {
+          "heading": "Google account information",
+          "paragraphs": [
+            "If you sign in with Google, WeatherNow may receive basic account information such as your email address and an OAuth access token needed to use the Google features you authorize. The dashboard uses that authorization to load Google Calendar information and to provide Google-connected journal functionality.",
+            "WeatherNow's use and transfer of information received from Google APIs will adhere to the Google API Services User Data Policy, including the Limited Use requirements."
+          ]
+        },
+        {
+          "heading": "Calendar and journal data",
+          "paragraphs": [
+            "Calendar information is used to display events and calendar sources inside WeatherNow. Journal information is used to provide the personal weather journal and, when Google-connected features are enabled, to support synchronization or backup functionality initiated by you."
+          ]
+        },
+        {
+          "heading": "Location information",
+          "paragraphs": [
+            "If you allow device location access, WeatherNow uses your coordinates to provide local weather, forecasts, maps, environmental information, and nearby or location-based results. You can also search for or select locations manually."
+          ]
+        },
+        {
+          "heading": "Local browser storage",
+          "paragraphs": [
+            "WeatherNow uses browser storage for app settings, saved locations, cached weather or environmental information, installation state, and other data needed to keep the dashboard working between sessions. Clearing browser or site data may remove locally stored information."
+          ]
+        },
+        {
+          "heading": "Third-party services",
+          "paragraphs": [
+            "WeatherNow retrieves information or functionality from third-party services used by the dashboard, which may include Google services, Open-Meteo, OpenStreetMap-related services, weather agencies, satellite/radar providers, YouTube, and news publishers. Those providers may process requests under their own privacy policies and terms."
+          ]
+        },
+        {
+          "heading": "Sharing and sale of personal information",
+          "paragraphs": [
+            "WeatherNow does not sell your personal information. Information is shared with third-party providers only as needed to provide features you request or when required by law."
+          ]
+        },
+        {
+          "heading": "Data retention and control",
+          "paragraphs": [
+            "You can disconnect your Google account from WeatherNow by signing out. You can also remove WeatherNow's Google account access from your Google Account permissions. Locally stored dashboard data can be removed by clearing the site's browser storage. Data stored in your own Google account remains subject to Google's controls and retention settings."
+          ]
+        },
+        {
+          "heading": "Security",
+          "paragraphs": [
+            "WeatherNow uses standard browser security mechanisms and HTTPS when deployed securely. No internet service can guarantee absolute security, so users should avoid placing highly sensitive information in journal entries."
+          ]
+        },
+        {
+          "heading": "Children",
+          "paragraphs": [
+            "WeatherNow is not intended to knowingly collect personal information from children in violation of applicable law."
+          ]
+        },
+        {
+          "heading": "Changes to this policy",
+          "paragraphs": [
+            "This Privacy Policy may be updated as WeatherNow features or legal requirements change. The effective date above will be updated when material changes are made."
+          ]
+        }
+      ],
+      "contactHeading": "Contact",
+      "contactBefore": "For privacy questions about WeatherNow, contact the developer through the",
+      "contactLink": "WeatherNow GitHub repository"
+    },
+    "terms": {
+      "title": "Terms of Service",
+      "heading": "WeatherNow Terms of Service",
+      "intro": "These Terms of Service govern your use of WeatherNow. By using WeatherNow, you agree to these terms.",
+      "sections": [
+        {
+          "heading": "Weather and environmental information",
+          "paragraphs": [
+            "WeatherNow combines information from external weather, environmental, mapping, satellite, radar, and related providers. Forecasts and observations may be delayed, incomplete, unavailable, or inaccurate. WeatherNow is provided for general informational purposes and must not be treated as an official emergency, aviation, marine-navigation, medical, or life-safety service."
+          ]
+        },
+        {
+          "heading": "Google-connected features",
+          "paragraphs": [
+            "Google Calendar and other Google-connected functionality is optional. By connecting a Google account, you authorize WeatherNow to use the permissions you approve for the features you choose to use. You remain responsible for your Google account and may revoke WeatherNow access through your Google Account settings."
+          ]
+        },
+        {
+          "heading": "Journal and user content",
+          "paragraphs": [
+            "You are responsible for journal text, photos, locations, and other content you add to WeatherNow. Do not upload content you do not have the right to use. You are responsible for maintaining any backups you consider important."
+          ]
+        },
+        {
+          "heading": "Third-party services and content",
+          "paragraphs": [
+            "WeatherNow may display or link to information from third parties, including weather providers, map services, news publishers, Google services, YouTube, and other data providers. Their services, content, availability, and policies are controlled by those providers, not WeatherNow."
+          ]
+        },
+        {
+          "heading": "Acceptable use",
+          "paragraphs": [
+            "You may not use WeatherNow to violate applicable law, interfere with the service, attempt unauthorized access to accounts or systems, abuse third-party APIs, or misuse content supplied by third-party providers."
+          ]
+        },
+        {
+          "heading": "Availability and changes",
+          "paragraphs": [
+            "WeatherNow may change, suspend, or discontinue features when providers, APIs, technical requirements, or project needs change. Continuous availability is not guaranteed."
+          ]
+        },
+        {
+          "heading": "No warranties",
+          "paragraphs": [
+            "WeatherNow is provided on an \"as is\" and \"as available\" basis without warranties of uninterrupted operation, error-free data, forecast accuracy, or fitness for a particular purpose, to the extent permitted by applicable law."
+          ]
+        },
+        {
+          "heading": "Limitation of liability",
+          "paragraphs": [
+            "To the extent permitted by applicable law, the developer of WeatherNow is not liable for losses resulting from reliance on weather information, provider outages, unavailable features, lost locally stored data, third-party content, or use of the service."
+          ]
+        },
+        {
+          "heading": "Changes to these terms",
+          "paragraphs": [
+            "These Terms may be updated as WeatherNow changes. Continued use after an updated version is published constitutes acceptance of the revised Terms to the extent permitted by applicable law."
+          ]
+        }
+      ],
+      "contactHeading": "Contact",
+      "contactBefore": "Questions about these Terms can be raised through the",
+      "contactLink": "WeatherNow GitHub repository"
+    }
+  },
+  "es": {
+    "dir": "ltr",
+    "close": "Cerrar y volver al panel",
+    "closeTitle": "Cerrar",
+    "legalNav": "Enlaces legales y de la aplicación",
+    "privacyLabel": "Política de privacidad",
+    "termsLabel": "Términos del servicio",
+    "effective": "Fecha de entrada en vigor: 12 de septiembre de 2026",
+    "privacy": {
+      "title": "Política de privacidad",
+      "heading": "Política de privacidad de WeatherNow",
+      "intro": "WeatherNow ofrece información meteorológica, mapas, pronósticos, información ambiental, noticias, funciones de calendario, un diario meteorológico personal y funciones multimedia opcionales. Esta Política de privacidad explica cómo se maneja la información cuando usas WeatherNow.",
+      "sections": [
+        {
+          "heading": "Información que proporcionas o autorizas",
+          "paragraphs": [
+            "WeatherNow puede procesar la información que decidas proporcionar, incluidas ubicaciones guardadas, ajustes, entradas del diario y fotos que añadas. Si conectas una cuenta de Google, WeatherNow solicita acceso solo para las funciones integradas con Google que tú inicias, como el acceso al Calendario y la sincronización relacionada con el diario."
+          ]
+        },
+        {
+          "heading": "Información de la cuenta de Google",
+          "paragraphs": [
+            "Si inicias sesión con Google, WeatherNow puede recibir información básica de la cuenta, como tu correo electrónico y un token de acceso OAuth necesario para usar las funciones de Google que autorices. El panel usa esa autorización para cargar información de Google Calendar y ofrecer funciones del diario conectadas con Google.",
+            "El uso y la transferencia por WeatherNow de información recibida de las API de Google cumplirán la Política de datos de usuario de los servicios API de Google, incluidos los requisitos de Uso limitado."
+          ]
+        },
+        {
+          "heading": "Datos del calendario y del diario",
+          "paragraphs": [
+            "La información del calendario se usa para mostrar eventos y fuentes de calendario dentro de WeatherNow. La información del diario se usa para ofrecer el diario meteorológico personal y, cuando están activadas las funciones conectadas con Google, para admitir la sincronización o copia de seguridad iniciada por ti."
+          ]
+        },
+        {
+          "heading": "Información de ubicación",
+          "paragraphs": [
+            "Si permites el acceso a la ubicación del dispositivo, WeatherNow usa tus coordenadas para ofrecer clima local, pronósticos, mapas, información ambiental y resultados cercanos o basados en ubicación. También puedes buscar o seleccionar ubicaciones manualmente."
+          ]
+        },
+        {
+          "heading": "Almacenamiento local del navegador",
+          "paragraphs": [
+            "WeatherNow usa el almacenamiento del navegador para ajustes de la aplicación, ubicaciones guardadas, información meteorológica o ambiental en caché, estado de instalación y otros datos necesarios para mantener el panel entre sesiones. Borrar los datos del navegador o del sitio puede eliminar información almacenada localmente."
+          ]
+        },
+        {
+          "heading": "Servicios de terceros",
+          "paragraphs": [
+            "WeatherNow obtiene información o funciones de servicios de terceros, que pueden incluir servicios de Google, Open-Meteo, servicios relacionados con OpenStreetMap, agencias meteorológicas, proveedores de satélite/radar, YouTube y editores de noticias. Esos proveedores pueden procesar solicitudes conforme a sus propias políticas y términos."
+          ]
+        },
+        {
+          "heading": "Compartición y venta de información personal",
+          "paragraphs": [
+            "WeatherNow no vende tu información personal. La información solo se comparte con proveedores externos cuando es necesario para ofrecer las funciones que solicitas o cuando lo exige la ley."
+          ]
+        },
+        {
+          "heading": "Conservación y control de datos",
+          "paragraphs": [
+            "Puedes desconectar tu cuenta de Google de WeatherNow cerrando sesión. También puedes retirar el acceso de WeatherNow desde los permisos de tu Cuenta de Google. Los datos guardados localmente pueden eliminarse borrando el almacenamiento del sitio. Los datos almacenados en tu propia cuenta de Google siguen sujetos a los controles y plazos de conservación de Google."
+          ]
+        },
+        {
+          "heading": "Seguridad",
+          "paragraphs": [
+            "WeatherNow usa mecanismos de seguridad estándar del navegador y HTTPS cuando se despliega de forma segura. Ningún servicio de Internet puede garantizar seguridad absoluta, por lo que debes evitar incluir información muy sensible en las entradas del diario."
+          ]
+        },
+        {
+          "heading": "Menores",
+          "paragraphs": [
+            "WeatherNow no está destinado a recopilar conscientemente información personal de menores de forma contraria a la legislación aplicable."
+          ]
+        },
+        {
+          "heading": "Cambios en esta política",
+          "paragraphs": [
+            "Esta Política de privacidad puede actualizarse cuando cambien las funciones de WeatherNow o los requisitos legales. La fecha de entrada en vigor se actualizará cuando haya cambios importantes."
+          ]
+        }
+      ],
+      "contactHeading": "Contacto",
+      "contactBefore": "Para preguntas de privacidad sobre WeatherNow, contacta con el desarrollador mediante el",
+      "contactLink": "repositorio de WeatherNow en GitHub"
+    },
+    "terms": {
+      "title": "Términos del servicio",
+      "heading": "Términos del servicio de WeatherNow",
+      "intro": "Estos Términos del servicio regulan tu uso de WeatherNow. Al usar WeatherNow, aceptas estos términos.",
+      "sections": [
+        {
+          "heading": "Información meteorológica y ambiental",
+          "paragraphs": [
+            "WeatherNow combina información de proveedores externos de meteorología, medio ambiente, mapas, satélite, radar y servicios relacionados. Los pronósticos y observaciones pueden retrasarse, ser incompletos, no estar disponibles o ser inexactos. WeatherNow se ofrece con fines informativos generales y no debe tratarse como un servicio oficial de emergencias, aviación, navegación marítima, medicina o seguridad vital."
+          ]
+        },
+        {
+          "heading": "Funciones conectadas con Google",
+          "paragraphs": [
+            "Google Calendar y otras funciones conectadas con Google son opcionales. Al conectar una cuenta de Google, autorizas a WeatherNow a usar los permisos que apruebes para las funciones que elijas. Sigues siendo responsable de tu cuenta de Google y puedes revocar el acceso de WeatherNow desde los ajustes de tu Cuenta de Google."
+          ]
+        },
+        {
+          "heading": "Diario y contenido del usuario",
+          "paragraphs": [
+            "Eres responsable del texto del diario, fotos, ubicaciones y demás contenido que añadas a WeatherNow. No subas contenido que no tengas derecho a usar. También eres responsable de mantener las copias de seguridad que consideres importantes."
+          ]
+        },
+        {
+          "heading": "Servicios y contenido de terceros",
+          "paragraphs": [
+            "WeatherNow puede mostrar o enlazar información de terceros, incluidos proveedores meteorológicos, servicios de mapas, editores de noticias, servicios de Google, YouTube y otros proveedores de datos. Sus servicios, contenido, disponibilidad y políticas están controlados por esos proveedores, no por WeatherNow."
+          ]
+        },
+        {
+          "heading": "Uso aceptable",
+          "paragraphs": [
+            "No puedes usar WeatherNow para infringir la ley aplicable, interferir con el servicio, intentar acceso no autorizado a cuentas o sistemas, abusar de API de terceros ni utilizar indebidamente contenido de proveedores externos."
+          ]
+        },
+        {
+          "heading": "Disponibilidad y cambios",
+          "paragraphs": [
+            "WeatherNow puede cambiar, suspender o retirar funciones cuando cambien los proveedores, API, requisitos técnicos o necesidades del proyecto. No se garantiza disponibilidad continua."
+          ]
+        },
+        {
+          "heading": "Sin garantías",
+          "paragraphs": [
+            "WeatherNow se proporciona «tal cual» y «según disponibilidad», sin garantías de funcionamiento ininterrumpido, datos sin errores, exactitud de los pronósticos o idoneidad para un fin concreto, en la medida permitida por la ley aplicable."
+          ]
+        },
+        {
+          "heading": "Limitación de responsabilidad",
+          "paragraphs": [
+            "En la medida permitida por la ley aplicable, el desarrollador de WeatherNow no responde por pérdidas derivadas de confiar en información meteorológica, interrupciones de proveedores, funciones no disponibles, pérdida de datos locales, contenido de terceros o uso del servicio."
+          ]
+        },
+        {
+          "heading": "Cambios en estos términos",
+          "paragraphs": [
+            "Estos Términos pueden actualizarse cuando cambie WeatherNow. El uso continuado tras publicarse una versión actualizada constituye aceptación de los Términos revisados en la medida permitida por la ley aplicable."
+          ]
+        }
+      ],
+      "contactHeading": "Contacto",
+      "contactBefore": "Las preguntas sobre estos Términos pueden plantearse mediante el",
+      "contactLink": "repositorio de WeatherNow en GitHub"
+    }
+  },
+  "fr": {
+    "dir": "ltr",
+    "close": "Fermer et revenir au tableau de bord",
+    "closeTitle": "Fermer",
+    "legalNav": "Liens juridiques et de l’application",
+    "privacyLabel": "Politique de confidentialité",
+    "termsLabel": "Conditions d’utilisation",
+    "effective": "Date d’entrée en vigueur : 12 septembre 2026",
+    "privacy": {
+      "title": "Politique de confidentialité",
+      "heading": "Politique de confidentialité de WeatherNow",
+      "intro": "WeatherNow fournit des informations météo, des cartes, des prévisions, des informations environnementales, des actualités, des fonctions de calendrier, un journal météo personnel et des fonctions multimédias facultatives. Cette politique explique comment les informations sont traitées lorsque vous utilisez WeatherNow.",
+      "sections": [
+        {
+          "heading": "Informations que vous fournissez ou autorisez",
+          "paragraphs": [
+            "WeatherNow peut traiter les informations que vous choisissez de fournir, notamment les lieux enregistrés, les réglages, les entrées du journal et les photos ajoutées au journal. Si vous connectez un compte Google, WeatherNow demande uniquement les accès nécessaires aux fonctions Google que vous déclenchez, comme le calendrier et la synchronisation du journal."
+          ]
+        },
+        {
+          "heading": "Informations du compte Google",
+          "paragraphs": [
+            "Si vous vous connectez avec Google, WeatherNow peut recevoir des informations de base telles que votre adresse e-mail et un jeton d’accès OAuth nécessaire aux fonctions Google que vous autorisez. Le tableau de bord utilise cette autorisation pour charger Google Calendar et fournir les fonctions du journal liées à Google.",
+            "L’utilisation et le transfert par WeatherNow des informations reçues des API Google respecteront la politique relative aux données utilisateur des services API Google, y compris les exigences d’utilisation limitée."
+          ]
+        },
+        {
+          "heading": "Données du calendrier et du journal",
+          "paragraphs": [
+            "Les informations du calendrier servent à afficher les événements et les sources de calendrier dans WeatherNow. Les informations du journal servent au journal météo personnel et, lorsque les fonctions Google sont activées, à la synchronisation ou à la sauvegarde que vous initiez."
+          ]
+        },
+        {
+          "heading": "Informations de localisation",
+          "paragraphs": [
+            "Si vous autorisez l’accès à la localisation de l’appareil, WeatherNow utilise vos coordonnées pour fournir la météo locale, les prévisions, les cartes, les informations environnementales et les résultats proches ou géolocalisés. Vous pouvez aussi rechercher ou choisir un lieu manuellement."
+          ]
+        },
+        {
+          "heading": "Stockage local du navigateur",
+          "paragraphs": [
+            "WeatherNow utilise le stockage du navigateur pour les réglages, les lieux enregistrés, les données météo ou environnementales en cache, l’état d’installation et d’autres données nécessaires entre les sessions. Effacer les données du navigateur ou du site peut supprimer les informations stockées localement."
+          ]
+        },
+        {
+          "heading": "Services tiers",
+          "paragraphs": [
+            "WeatherNow récupère des informations ou fonctions auprès de services tiers, notamment Google, Open-Meteo, des services liés à OpenStreetMap, des agences météo, des fournisseurs satellite/radar, YouTube et des éditeurs d’actualités. Ces fournisseurs peuvent traiter les requêtes selon leurs propres politiques et conditions."
+          ]
+        },
+        {
+          "heading": "Partage et vente des informations personnelles",
+          "paragraphs": [
+            "WeatherNow ne vend pas vos informations personnelles. Elles ne sont partagées avec des prestataires tiers que lorsque cela est nécessaire pour fournir une fonction demandée ou lorsque la loi l’exige."
+          ]
+        },
+        {
+          "heading": "Conservation et contrôle des données",
+          "paragraphs": [
+            "Vous pouvez déconnecter votre compte Google de WeatherNow en vous déconnectant. Vous pouvez aussi retirer l’accès de WeatherNow dans les autorisations de votre compte Google. Les données locales peuvent être supprimées en effaçant le stockage du site. Les données de votre compte Google restent soumises aux contrôles et règles de conservation de Google."
+          ]
+        },
+        {
+          "heading": "Sécurité",
+          "paragraphs": [
+            "WeatherNow utilise les mécanismes de sécurité standard du navigateur et HTTPS lorsqu’il est déployé de façon sécurisée. Aucun service Internet ne peut garantir une sécurité absolue ; évitez donc de placer des informations très sensibles dans le journal."
+          ]
+        },
+        {
+          "heading": "Enfants",
+          "paragraphs": [
+            "WeatherNow n’a pas pour objectif de collecter sciemment des informations personnelles d’enfants en violation de la loi applicable."
+          ]
+        },
+        {
+          "heading": "Modifications de cette politique",
+          "paragraphs": [
+            "Cette politique peut être mise à jour lorsque les fonctions de WeatherNow ou les exigences légales changent. La date d’entrée en vigueur ci-dessus sera mise à jour lors de modifications importantes."
+          ]
+        }
+      ],
+      "contactHeading": "Contact",
+      "contactBefore": "Pour toute question de confidentialité concernant WeatherNow, contactez le développeur via le",
+      "contactLink": "dépôt GitHub de WeatherNow"
+    },
+    "terms": {
+      "title": "Conditions d’utilisation",
+      "heading": "Conditions d’utilisation de WeatherNow",
+      "intro": "Ces Conditions régissent votre utilisation de WeatherNow. En utilisant WeatherNow, vous acceptez ces conditions.",
+      "sections": [
+        {
+          "heading": "Informations météo et environnementales",
+          "paragraphs": [
+            "WeatherNow combine des informations provenant de fournisseurs externes de météo, d’environnement, de cartographie, de satellite, de radar et de services associés. Les prévisions et observations peuvent être retardées, incomplètes, indisponibles ou inexactes. WeatherNow est fourni à titre d’information générale et ne doit pas être considéré comme un service officiel d’urgence, d’aviation, de navigation maritime, médical ou de sécurité des personnes."
+          ]
+        },
+        {
+          "heading": "Fonctions connectées à Google",
+          "paragraphs": [
+            "Google Calendar et les autres fonctions liées à Google sont facultatives. En connectant un compte Google, vous autorisez WeatherNow à utiliser les permissions que vous approuvez pour les fonctions choisies. Vous restez responsable de votre compte Google et pouvez révoquer l’accès de WeatherNow dans les paramètres de votre compte Google."
+          ]
+        },
+        {
+          "heading": "Journal et contenu utilisateur",
+          "paragraphs": [
+            "Vous êtes responsable du texte du journal, des photos, des lieux et des autres contenus ajoutés à WeatherNow. Ne téléversez pas de contenu que vous n’avez pas le droit d’utiliser. Vous êtes responsable des sauvegardes que vous jugez importantes."
+          ]
+        },
+        {
+          "heading": "Services et contenus tiers",
+          "paragraphs": [
+            "WeatherNow peut afficher ou lier des informations de tiers, notamment des fournisseurs météo, services cartographiques, éditeurs d’actualités, services Google, YouTube et autres fournisseurs de données. Leurs services, contenus, disponibilité et politiques relèvent de ces fournisseurs, pas de WeatherNow."
+          ]
+        },
+        {
+          "heading": "Utilisation acceptable",
+          "paragraphs": [
+            "Vous ne pouvez pas utiliser WeatherNow pour enfreindre la loi, perturber le service, tenter un accès non autorisé à des comptes ou systèmes, abuser d’API tierces ou détourner du contenu fourni par des tiers."
+          ]
+        },
+        {
+          "heading": "Disponibilité et modifications",
+          "paragraphs": [
+            "WeatherNow peut modifier, suspendre ou supprimer des fonctions lorsque les fournisseurs, API, exigences techniques ou besoins du projet évoluent. Une disponibilité continue n’est pas garantie."
+          ]
+        },
+        {
+          "heading": "Absence de garanties",
+          "paragraphs": [
+            "WeatherNow est fourni « en l’état » et « selon disponibilité », sans garantie de fonctionnement ininterrompu, de données sans erreur, d’exactitude des prévisions ou d’adéquation à un usage particulier, dans les limites autorisées par la loi."
+          ]
+        },
+        {
+          "heading": "Limitation de responsabilité",
+          "paragraphs": [
+            "Dans les limites autorisées par la loi, le développeur de WeatherNow n’est pas responsable des pertes résultant de la confiance accordée aux informations météo, des pannes de fournisseurs, de fonctions indisponibles, de pertes de données locales, de contenus tiers ou de l’utilisation du service."
+          ]
+        },
+        {
+          "heading": "Modifications de ces conditions",
+          "paragraphs": [
+            "Ces Conditions peuvent être mises à jour lorsque WeatherNow évolue. La poursuite de l’utilisation après publication d’une version mise à jour vaut acceptation des Conditions révisées dans les limites autorisées par la loi."
+          ]
+        }
+      ],
+      "contactHeading": "Contact",
+      "contactBefore": "Les questions concernant ces Conditions peuvent être posées via le",
+      "contactLink": "dépôt GitHub de WeatherNow"
+    }
+  },
+  "de": {
+    "dir": "ltr",
+    "close": "Schließen und zum Dashboard zurückkehren",
+    "closeTitle": "Schließen",
+    "legalNav": "Rechtliche und App-Links",
+    "privacyLabel": "Datenschutzerklärung",
+    "termsLabel": "Nutzungsbedingungen",
+    "effective": "Gültig ab: 12. September 2026",
+    "privacy": {
+      "title": "Datenschutzerklärung",
+      "heading": "WeatherNow Datenschutzerklärung",
+      "intro": "WeatherNow bietet Wetterinformationen, Karten, Vorhersagen, Umweltdaten, Nachrichten, Kalenderfunktionen, ein persönliches Wetterjournal und optionale Medienfunktionen. Diese Datenschutzerklärung erläutert, wie Informationen bei der Nutzung von WeatherNow verarbeitet werden.",
+      "sections": [
+        {
+          "heading": "Informationen, die Sie bereitstellen oder autorisieren",
+          "paragraphs": [
+            "WeatherNow kann Informationen verarbeiten, die Sie bereitstellen, darunter gespeicherte Orte, Einstellungen, Journaleinträge und Fotos. Wenn Sie ein Google-Konto verbinden, fordert WeatherNow nur Zugriff für von Ihnen gestartete Google-Funktionen an, etwa Kalenderzugriff und Journal-Synchronisierung."
+          ]
+        },
+        {
+          "heading": "Google-Kontoinformationen",
+          "paragraphs": [
+            "Wenn Sie sich mit Google anmelden, kann WeatherNow grundlegende Kontoinformationen wie Ihre E-Mail-Adresse und ein OAuth-Zugriffstoken erhalten, das für die von Ihnen autorisierten Google-Funktionen benötigt wird. Das Dashboard verwendet diese Autorisierung, um Google Calendar zu laden und Google-verbundene Journalfunktionen bereitzustellen.",
+            "Die Nutzung und Übertragung von Informationen aus Google APIs durch WeatherNow entspricht der Google API Services User Data Policy einschließlich der Anforderungen zur eingeschränkten Nutzung."
+          ]
+        },
+        {
+          "heading": "Kalender- und Journaldaten",
+          "paragraphs": [
+            "Kalenderinformationen werden zur Anzeige von Ereignissen und Kalenderquellen in WeatherNow verwendet. Journalinformationen dienen dem persönlichen Wetterjournal und, wenn Google-Funktionen aktiviert sind, der von Ihnen veranlassten Synchronisierung oder Sicherung."
+          ]
+        },
+        {
+          "heading": "Standortinformationen",
+          "paragraphs": [
+            "Wenn Sie den Standortzugriff erlauben, nutzt WeatherNow Ihre Koordinaten für lokales Wetter, Vorhersagen, Karten, Umweltdaten und standortbezogene Ergebnisse. Orte können auch manuell gesucht oder gewählt werden."
+          ]
+        },
+        {
+          "heading": "Lokaler Browserspeicher",
+          "paragraphs": [
+            "WeatherNow nutzt Browserspeicher für App-Einstellungen, gespeicherte Orte, zwischengespeicherte Wetter- oder Umweltdaten, Installationsstatus und weitere Daten, die zwischen Sitzungen benötigt werden. Das Löschen von Browser- oder Websitedaten kann lokal gespeicherte Informationen entfernen."
+          ]
+        },
+        {
+          "heading": "Drittanbieterdienste",
+          "paragraphs": [
+            "WeatherNow bezieht Informationen oder Funktionen von Drittanbietern, darunter Google-Dienste, Open-Meteo, OpenStreetMap-bezogene Dienste, Wetterbehörden, Satelliten-/Radaranbieter, YouTube und Nachrichtenanbieter. Diese können Anfragen nach ihren eigenen Datenschutzregeln und Bedingungen verarbeiten."
+          ]
+        },
+        {
+          "heading": "Weitergabe und Verkauf personenbezogener Daten",
+          "paragraphs": [
+            "WeatherNow verkauft Ihre personenbezogenen Daten nicht. Informationen werden nur an Drittanbieter weitergegeben, soweit dies für angeforderte Funktionen erforderlich oder gesetzlich vorgeschrieben ist."
+          ]
+        },
+        {
+          "heading": "Datenaufbewahrung und Kontrolle",
+          "paragraphs": [
+            "Sie können Ihr Google-Konto durch Abmelden trennen und WeatherNow den Zugriff in den Berechtigungen Ihres Google-Kontos entziehen. Lokal gespeicherte Dashboard-Daten können durch Löschen des Website-Speichers entfernt werden. Daten in Ihrem Google-Konto unterliegen den Kontrollen und Aufbewahrungsregeln von Google."
+          ]
+        },
+        {
+          "heading": "Sicherheit",
+          "paragraphs": [
+            "WeatherNow verwendet übliche Browser-Sicherheitsmechanismen und bei sicherer Bereitstellung HTTPS. Kein Internetdienst kann absolute Sicherheit garantieren; vermeiden Sie daher besonders sensible Informationen in Journaleinträgen."
+          ]
+        },
+        {
+          "heading": "Kinder",
+          "paragraphs": [
+            "WeatherNow ist nicht dazu bestimmt, wissentlich personenbezogene Daten von Kindern unter Verstoß gegen geltendes Recht zu sammeln."
+          ]
+        },
+        {
+          "heading": "Änderungen dieser Erklärung",
+          "paragraphs": [
+            "Diese Datenschutzerklärung kann bei Änderungen an WeatherNow oder rechtlichen Anforderungen aktualisiert werden. Bei wesentlichen Änderungen wird das oben genannte Gültigkeitsdatum angepasst."
+          ]
+        }
+      ],
+      "contactHeading": "Kontakt",
+      "contactBefore": "Bei Datenschutzfragen zu WeatherNow kontaktieren Sie den Entwickler über das",
+      "contactLink": "WeatherNow-GitHub-Repository"
+    },
+    "terms": {
+      "title": "Nutzungsbedingungen",
+      "heading": "WeatherNow Nutzungsbedingungen",
+      "intro": "Diese Nutzungsbedingungen regeln Ihre Nutzung von WeatherNow. Durch die Nutzung von WeatherNow stimmen Sie diesen Bedingungen zu.",
+      "sections": [
+        {
+          "heading": "Wetter- und Umweltinformationen",
+          "paragraphs": [
+            "WeatherNow kombiniert Informationen externer Anbieter für Wetter, Umwelt, Karten, Satellit, Radar und verwandte Dienste. Vorhersagen und Beobachtungen können verspätet, unvollständig, nicht verfügbar oder ungenau sein. WeatherNow dient allgemeinen Informationszwecken und ist kein offizieller Dienst für Notfälle, Luftfahrt, Seeschifffahrt, Medizin oder Lebenssicherheit."
+          ]
+        },
+        {
+          "heading": "Mit Google verbundene Funktionen",
+          "paragraphs": [
+            "Google Calendar und andere Google-Funktionen sind optional. Durch Verbinden eines Google-Kontos autorisieren Sie WeatherNow, die von Ihnen genehmigten Berechtigungen für gewählte Funktionen zu verwenden. Sie bleiben für Ihr Google-Konto verantwortlich und können den Zugriff von WeatherNow in den Google-Kontoeinstellungen widerrufen."
+          ]
+        },
+        {
+          "heading": "Journal und Nutzerinhalte",
+          "paragraphs": [
+            "Sie sind für Journaltexte, Fotos, Orte und andere Inhalte verantwortlich, die Sie WeatherNow hinzufügen. Laden Sie keine Inhalte hoch, zu deren Nutzung Sie nicht berechtigt sind. Für wichtige Sicherungen sind Sie selbst verantwortlich."
+          ]
+        },
+        {
+          "heading": "Drittanbieterdienste und -inhalte",
+          "paragraphs": [
+            "WeatherNow kann Informationen von Drittanbietern anzeigen oder verlinken, darunter Wetteranbieter, Kartendienste, Nachrichtenanbieter, Google-Dienste, YouTube und weitere Datenanbieter. Deren Dienste, Inhalte, Verfügbarkeit und Richtlinien werden von diesen Anbietern kontrolliert, nicht von WeatherNow."
+          ]
+        },
+        {
+          "heading": "Zulässige Nutzung",
+          "paragraphs": [
+            "Sie dürfen WeatherNow nicht nutzen, um geltendes Recht zu verletzen, den Dienst zu stören, unbefugten Zugriff auf Konten oder Systeme zu versuchen, Drittanbieter-APIs zu missbrauchen oder Inhalte von Drittanbietern missbräuchlich zu verwenden."
+          ]
+        },
+        {
+          "heading": "Verfügbarkeit und Änderungen",
+          "paragraphs": [
+            "WeatherNow kann Funktionen ändern, aussetzen oder einstellen, wenn sich Anbieter, APIs, technische Anforderungen oder Projektanforderungen ändern. Eine dauerhafte Verfügbarkeit wird nicht garantiert."
+          ]
+        },
+        {
+          "heading": "Keine Gewährleistungen",
+          "paragraphs": [
+            "WeatherNow wird im gesetzlich zulässigen Umfang „wie besehen“ und „wie verfügbar“ ohne Gewähr für unterbrechungsfreien Betrieb, fehlerfreie Daten, Vorhersagegenauigkeit oder Eignung für einen bestimmten Zweck bereitgestellt."
+          ]
+        },
+        {
+          "heading": "Haftungsbeschränkung",
+          "paragraphs": [
+            "Soweit gesetzlich zulässig, haftet der Entwickler von WeatherNow nicht für Verluste durch Vertrauen auf Wetterinformationen, Anbieterausfälle, nicht verfügbare Funktionen, verlorene lokale Daten, Drittanbieterinhalte oder die Nutzung des Dienstes."
+          ]
+        },
+        {
+          "heading": "Änderungen dieser Bedingungen",
+          "paragraphs": [
+            "Diese Bedingungen können bei Änderungen an WeatherNow aktualisiert werden. Die fortgesetzte Nutzung nach Veröffentlichung einer aktualisierten Fassung gilt im gesetzlich zulässigen Umfang als Zustimmung zu den überarbeiteten Bedingungen."
+          ]
+        }
+      ],
+      "contactHeading": "Kontakt",
+      "contactBefore": "Fragen zu diesen Bedingungen können über das",
+      "contactLink": "WeatherNow-GitHub-Repository"
+    }
+  },
+  "zh": {
+    "dir": "ltr",
+    "close": "关闭并返回仪表板",
+    "closeTitle": "关闭",
+    "legalNav": "法律与应用链接",
+    "privacyLabel": "隐私政策",
+    "termsLabel": "服务条款",
+    "effective": "生效日期：2026年9月12日",
+    "privacy": {
+      "title": "隐私政策",
+      "heading": "WeatherNow 隐私政策",
+      "intro": "WeatherNow 提供天气信息、地图、预报、环境信息、新闻、日历功能、个人天气日志和可选媒体功能。本隐私政策说明你使用 WeatherNow 时信息如何被处理。",
+      "sections": [
+        {
+          "heading": "你提供或授权的信息",
+          "paragraphs": [
+            "WeatherNow 可能处理你选择提供的信息，包括已保存地点、设置、日志条目以及添加到日志中的照片。连接 Google 帐号时，WeatherNow 仅为你主动使用的 Google 集成功能请求访问权限，例如日历访问和与日志相关的同步。"
+          ]
+        },
+        {
+          "heading": "Google 帐号信息",
+          "paragraphs": [
+            "如果你使用 Google 登录，WeatherNow 可能获得基本帐号信息，例如电子邮件地址，以及使用你所授权 Google 功能所需的 OAuth 访问令牌。仪表板使用该授权加载 Google 日历信息并提供与 Google 连接的日志功能。",
+            "WeatherNow 对从 Google API 获取的信息的使用和传输将遵守 Google API 服务用户数据政策，包括“有限使用”要求。"
+          ]
+        },
+        {
+          "heading": "日历和日志数据",
+          "paragraphs": [
+            "日历信息用于在 WeatherNow 中显示事件和日历来源。日志信息用于提供个人天气日志，并在启用 Google 连接功能时支持由你发起的同步或备份。"
+          ]
+        },
+        {
+          "heading": "位置信息",
+          "paragraphs": [
+            "如果你允许设备位置访问，WeatherNow 会使用坐标提供本地天气、预报、地图、环境信息以及附近或基于位置的结果。你也可以手动搜索或选择地点。"
+          ]
+        },
+        {
+          "heading": "浏览器本地存储",
+          "paragraphs": [
+            "WeatherNow 使用浏览器存储保存应用设置、地点、缓存的天气或环境信息、安装状态以及维持跨会话运行所需的其他数据。清除浏览器或网站数据可能会删除本地保存的信息。"
+          ]
+        },
+        {
+          "heading": "第三方服务",
+          "paragraphs": [
+            "WeatherNow 会从第三方服务获取信息或功能，其中可能包括 Google 服务、Open-Meteo、OpenStreetMap 相关服务、气象机构、卫星/雷达提供商、YouTube 和新闻发布者。这些提供商可能依据各自的隐私政策和条款处理请求。"
+          ]
+        },
+        {
+          "heading": "个人信息的共享和出售",
+          "paragraphs": [
+            "WeatherNow 不出售你的个人信息。只有在提供你请求的功能所必需或法律要求时，才会与第三方提供商共享信息。"
+          ]
+        },
+        {
+          "heading": "数据保留与控制",
+          "paragraphs": [
+            "你可以通过退出登录断开 Google 帐号，也可以在 Google 帐号权限中撤销 WeatherNow 的访问。清除网站浏览器存储可删除本地仪表板数据。保存在你 Google 帐号中的数据仍受 Google 的控制和保留设置约束。"
+          ]
+        },
+        {
+          "heading": "安全",
+          "paragraphs": [
+            "WeatherNow 在安全部署时使用标准浏览器安全机制和 HTTPS。任何互联网服务都无法保证绝对安全，因此请避免在日志中填写高度敏感的信息。"
+          ]
+        },
+        {
+          "heading": "儿童",
+          "paragraphs": [
+            "WeatherNow 无意在违反适用法律的情况下故意收集儿童的个人信息。"
+          ]
+        },
+        {
+          "heading": "本政策的变更",
+          "paragraphs": [
+            "随着 WeatherNow 功能或法律要求发生变化，本隐私政策可能会更新。发生重大变更时，上述生效日期也会更新。"
+          ]
+        }
+      ],
+      "contactHeading": "联系",
+      "contactBefore": "如对 WeatherNow 的隐私有疑问，请通过以下方式联系开发者：",
+      "contactLink": "WeatherNow GitHub 仓库"
+    },
+    "terms": {
+      "title": "服务条款",
+      "heading": "WeatherNow 服务条款",
+      "intro": "本服务条款规范你对 WeatherNow 的使用。使用 WeatherNow 即表示你同意这些条款。",
+      "sections": [
+        {
+          "heading": "天气与环境信息",
+          "paragraphs": [
+            "WeatherNow 汇集外部天气、环境、地图、卫星、雷达及相关提供商的信息。预报和观测可能延迟、不完整、不可用或不准确。WeatherNow 仅用于一般信息参考，不应被视为官方应急、航空、海上导航、医疗或生命安全服务。"
+          ]
+        },
+        {
+          "heading": "Google 连接功能",
+          "paragraphs": [
+            "Google 日历和其他 Google 连接功能均为可选。连接 Google 帐号即表示你授权 WeatherNow 在你选择使用的功能中使用你批准的权限。你仍需对自己的 Google 帐号负责，并可在 Google 帐号设置中撤销 WeatherNow 的访问。"
+          ]
+        },
+        {
+          "heading": "日志与用户内容",
+          "paragraphs": [
+            "你应对添加到 WeatherNow 的日志文字、照片、地点和其他内容负责。请勿上传你无权使用的内容。你也应自行维护认为重要的备份。"
+          ]
+        },
+        {
+          "heading": "第三方服务和内容",
+          "paragraphs": [
+            "WeatherNow 可能显示或链接第三方信息，包括天气提供商、地图服务、新闻发布者、Google 服务、YouTube 和其他数据提供商。它们的服务、内容、可用性和政策由相应提供商控制，而非 WeatherNow。"
+          ]
+        },
+        {
+          "heading": "可接受的使用",
+          "paragraphs": [
+            "不得使用 WeatherNow 违反适用法律、干扰服务、尝试未经授权访问帐号或系统、滥用第三方 API，或不当使用第三方提供的内容。"
+          ]
+        },
+        {
+          "heading": "可用性与变更",
+          "paragraphs": [
+            "当提供商、API、技术要求或项目需求发生变化时，WeatherNow 可能更改、暂停或停止某些功能。不保证持续可用。"
+          ]
+        },
+        {
+          "heading": "不作保证",
+          "paragraphs": [
+            "在适用法律允许的范围内，WeatherNow 按“现状”和“可用状态”提供，不保证服务不中断、数据无错误、预报准确或适合特定用途。"
+          ]
+        },
+        {
+          "heading": "责任限制",
+          "paragraphs": [
+            "在适用法律允许的范围内，WeatherNow 开发者不对因依赖天气信息、提供商中断、功能不可用、本地数据丢失、第三方内容或使用本服务而造成的损失承担责任。"
+          ]
+        },
+        {
+          "heading": "条款变更",
+          "paragraphs": [
+            "随着 WeatherNow 的变化，本条款可能更新。在适用法律允许的范围内，更新版本发布后继续使用即表示接受修订后的条款。"
+          ]
+        }
+      ],
+      "contactHeading": "联系",
+      "contactBefore": "有关这些条款的问题可通过以下方式提出：",
+      "contactLink": "WeatherNow GitHub 仓库"
+    }
+  },
+  "ja": {
+    "dir": "ltr",
+    "close": "閉じてダッシュボードに戻る",
+    "closeTitle": "閉じる",
+    "legalNav": "法的情報とアプリのリンク",
+    "privacyLabel": "プライバシーポリシー",
+    "termsLabel": "利用規約",
+    "effective": "発効日：2026年9月12日",
+    "privacy": {
+      "title": "プライバシーポリシー",
+      "heading": "WeatherNow プライバシーポリシー",
+      "intro": "WeatherNow は、天気情報、地図、予報、環境情報、ニュース、カレンダー機能、個人用天気日記、任意のメディア機能を提供します。本ポリシーでは、WeatherNow 利用時の情報の取り扱いについて説明します。",
+      "sections": [
+        {
+          "heading": "提供または許可する情報",
+          "paragraphs": [
+            "WeatherNow は、保存した場所、設定、日記の記録、日記に追加した写真など、あなたが提供する情報を処理する場合があります。Google アカウントを接続する場合、カレンダーへのアクセスや日記同期など、あなたが開始した Google 連携機能に必要な範囲でのみアクセスを求めます。"
+          ]
+        },
+        {
+          "heading": "Google アカウント情報",
+          "paragraphs": [
+            "Google でログインすると、WeatherNow はメールアドレスなどの基本情報と、許可した Google 機能に必要な OAuth アクセストークンを受け取る場合があります。ダッシュボードはこの認証を使って Google カレンダーを読み込み、Google 連携の日記機能を提供します。",
+            "Google API から受け取った情報の WeatherNow による利用および移転は、限定的使用要件を含む Google API サービスのユーザーデータポリシーに従います。"
+          ]
+        },
+        {
+          "heading": "カレンダーと日記のデータ",
+          "paragraphs": [
+            "カレンダー情報は WeatherNow 内でイベントやカレンダーソースを表示するために使用されます。日記情報は個人用天気日記を提供し、Google 連携が有効な場合は、あなたが開始する同期やバックアップを支援するために使用されます。"
+          ]
+        },
+        {
+          "heading": "位置情報",
+          "paragraphs": [
+            "端末の位置情報へのアクセスを許可した場合、WeatherNow は座標を使って地域の天気、予報、地図、環境情報、周辺または位置ベースの結果を提供します。場所を手動で検索・選択することもできます。"
+          ]
+        },
+        {
+          "heading": "ブラウザのローカルストレージ",
+          "paragraphs": [
+            "WeatherNow はアプリ設定、保存場所、キャッシュされた天気・環境情報、インストール状態、セッション間で必要なその他のデータをブラウザに保存します。ブラウザまたはサイトデータを消去すると、ローカル情報が削除される場合があります。"
+          ]
+        },
+        {
+          "heading": "第三者サービス",
+          "paragraphs": [
+            "WeatherNow は Google、Open-Meteo、OpenStreetMap 関連サービス、気象機関、衛星・レーダー提供者、YouTube、ニュース配信元などの第三者サービスから情報や機能を取得します。各提供者は独自のポリシーと条件に従ってリクエストを処理する場合があります。"
+          ]
+        },
+        {
+          "heading": "個人情報の共有と販売",
+          "paragraphs": [
+            "WeatherNow は個人情報を販売しません。情報は、あなたが求める機能の提供に必要な場合、または法律で要求される場合に限り第三者と共有されます。"
+          ]
+        },
+        {
+          "heading": "データ保持と管理",
+          "paragraphs": [
+            "WeatherNow からログアウトして Google アカウントを切断でき、Google アカウントの権限設定から WeatherNow のアクセスを削除することもできます。サイトのブラウザストレージを消去するとローカルデータを削除できます。Google アカウント内のデータは Google の管理と保持設定に従います。"
+          ]
+        },
+        {
+          "heading": "セキュリティ",
+          "paragraphs": [
+            "WeatherNow は安全に展開されている場合、標準的なブラウザのセキュリティ機構と HTTPS を使用します。インターネットサービスは絶対的な安全性を保証できないため、日記に非常に機密性の高い情報を記載しないでください。"
+          ]
+        },
+        {
+          "heading": "子ども",
+          "paragraphs": [
+            "WeatherNow は適用法に反して子どもの個人情報を意図的に収集することを目的としていません。"
+          ]
+        },
+        {
+          "heading": "本ポリシーの変更",
+          "paragraphs": [
+            "WeatherNow の機能または法的要件の変更に応じて本ポリシーを更新する場合があります。重要な変更がある場合は上記の発効日を更新します。"
+          ]
+        }
+      ],
+      "contactHeading": "連絡先",
+      "contactBefore": "WeatherNow のプライバシーに関する質問は、開発者へ次の場所からお問い合わせください：",
+      "contactLink": "WeatherNow GitHub リポジトリ"
+    },
+    "terms": {
+      "title": "利用規約",
+      "heading": "WeatherNow 利用規約",
+      "intro": "本利用規約は WeatherNow の利用に適用されます。WeatherNow を利用することで、本規約に同意したものとみなされます。",
+      "sections": [
+        {
+          "heading": "天気および環境情報",
+          "paragraphs": [
+            "WeatherNow は外部の天気、環境、地図、衛星、レーダーなどの提供者から情報を組み合わせます。予報や観測は遅延、不完全、利用不能、または不正確な場合があります。WeatherNow は一般的な情報提供を目的としており、公式の緊急、航空、海上航行、医療、生命安全サービスとして扱うべきではありません。"
+          ]
+        },
+        {
+          "heading": "Google 連携機能",
+          "paragraphs": [
+            "Google カレンダーなどの Google 連携機能は任意です。Google アカウントを接続すると、選択した機能について承認した権限を WeatherNow が利用することを許可します。Google アカウントの管理責任はあなたにあり、Google アカウント設定から WeatherNow のアクセスを取り消せます。"
+          ]
+        },
+        {
+          "heading": "日記とユーザーコンテンツ",
+          "paragraphs": [
+            "WeatherNow に追加する日記の文章、写真、場所などのコンテンツについてはあなたが責任を負います。利用権のないコンテンツをアップロードしないでください。重要と考えるバックアップの維持もあなたの責任です。"
+          ]
+        },
+        {
+          "heading": "第三者サービスとコンテンツ",
+          "paragraphs": [
+            "WeatherNow は天気提供者、地図サービス、ニュース配信元、Google サービス、YouTube、その他のデータ提供者など、第三者の情報を表示またはリンクする場合があります。それらのサービス、内容、可用性、ポリシーは WeatherNow ではなく各提供者が管理します。"
+          ]
+        },
+        {
+          "heading": "許容される利用",
+          "paragraphs": [
+            "適用法への違反、サービスの妨害、アカウントやシステムへの不正アクセスの試行、第三者 API の乱用、第三者コンテンツの不正利用のために WeatherNow を使用してはいけません。"
+          ]
+        },
+        {
+          "heading": "可用性と変更",
+          "paragraphs": [
+            "提供者、API、技術要件、プロジェクトの必要性が変化した場合、WeatherNow は機能を変更、一時停止、終了することがあります。継続的な可用性は保証されません。"
+          ]
+        },
+        {
+          "heading": "保証の否認",
+          "paragraphs": [
+            "適用法で認められる範囲で、WeatherNow は「現状有姿」かつ「提供可能な範囲」で提供され、継続稼働、データの無誤謬性、予報の正確性、特定目的への適合性を保証しません。"
+          ]
+        },
+        {
+          "heading": "責任の制限",
+          "paragraphs": [
+            "適用法で認められる範囲で、WeatherNow の開発者は、天気情報への依存、提供者の障害、利用不能な機能、ローカルデータの消失、第三者コンテンツ、本サービスの利用による損失について責任を負いません。"
+          ]
+        },
+        {
+          "heading": "規約の変更",
+          "paragraphs": [
+            "WeatherNow の変更に伴い本規約を更新する場合があります。更新版の公開後も利用を継続した場合、適用法で認められる範囲で改訂規約に同意したものとみなされます。"
+          ]
+        }
+      ],
+      "contactHeading": "連絡先",
+      "contactBefore": "本規約に関する質問は次の場所から提出できます：",
+      "contactLink": "WeatherNow GitHub リポジトリ"
+    }
+  },
+  "ko": {
+    "dir": "ltr",
+    "close": "닫고 대시보드로 돌아가기",
+    "closeTitle": "닫기",
+    "legalNav": "법적 및 앱 링크",
+    "privacyLabel": "개인정보 처리방침",
+    "termsLabel": "서비스 약관",
+    "effective": "시행일: 2026년 9월 12일",
+    "privacy": {
+      "title": "개인정보 처리방침",
+      "heading": "WeatherNow 개인정보 처리방침",
+      "intro": "WeatherNow는 날씨 정보, 지도, 예보, 환경 정보, 뉴스, 캘린더 기능, 개인 날씨 일지 및 선택적 미디어 기능을 제공합니다. 이 방침은 WeatherNow를 사용할 때 정보가 어떻게 처리되는지 설명합니다.",
+      "sections": [
+        {
+          "heading": "제공하거나 승인하는 정보",
+          "paragraphs": [
+            "WeatherNow는 저장한 위치, 설정, 일지 항목, 일지에 추가한 사진 등 사용자가 제공한 정보를 처리할 수 있습니다. Google 계정을 연결하면 캘린더 접근 및 일지 동기화처럼 사용자가 시작한 Google 연동 기능에 필요한 권한만 요청합니다."
+          ]
+        },
+        {
+          "heading": "Google 계정 정보",
+          "paragraphs": [
+            "Google로 로그인하면 WeatherNow는 이메일 주소 같은 기본 계정 정보와 승인한 Google 기능에 필요한 OAuth 액세스 토큰을 받을 수 있습니다. 대시보드는 이 권한을 사용해 Google Calendar 정보를 불러오고 Google 연동 일지 기능을 제공합니다.",
+            "WeatherNow의 Google API 정보 사용 및 전송은 제한적 사용 요구사항을 포함한 Google API 서비스 사용자 데이터 정책을 준수합니다."
+          ]
+        },
+        {
+          "heading": "캘린더 및 일지 데이터",
+          "paragraphs": [
+            "캘린더 정보는 WeatherNow 안에서 이벤트와 캘린더 소스를 표시하는 데 사용됩니다. 일지 정보는 개인 날씨 일지를 제공하고, Google 연동 기능이 활성화된 경우 사용자가 시작한 동기화 또는 백업을 지원하는 데 사용됩니다."
+          ]
+        },
+        {
+          "heading": "위치 정보",
+          "paragraphs": [
+            "기기 위치 접근을 허용하면 WeatherNow는 좌표를 사용해 지역 날씨, 예보, 지도, 환경 정보 및 주변/위치 기반 결과를 제공합니다. 위치를 직접 검색하거나 선택할 수도 있습니다."
+          ]
+        },
+        {
+          "heading": "브라우저 로컬 저장소",
+          "paragraphs": [
+            "WeatherNow는 앱 설정, 저장 위치, 캐시된 날씨/환경 정보, 설치 상태 및 세션 간 작동에 필요한 기타 데이터를 브라우저 저장소에 보관합니다. 브라우저 또는 사이트 데이터를 지우면 로컬 정보가 삭제될 수 있습니다."
+          ]
+        },
+        {
+          "heading": "제3자 서비스",
+          "paragraphs": [
+            "WeatherNow는 Google 서비스, Open-Meteo, OpenStreetMap 관련 서비스, 기상 기관, 위성/레이더 제공업체, YouTube, 뉴스 제공업체 등 제3자 서비스에서 정보나 기능을 가져옵니다. 해당 제공업체는 자체 개인정보 정책 및 약관에 따라 요청을 처리할 수 있습니다."
+          ]
+        },
+        {
+          "heading": "개인정보 공유 및 판매",
+          "paragraphs": [
+            "WeatherNow는 개인정보를 판매하지 않습니다. 요청한 기능 제공에 필요하거나 법률상 요구되는 경우에만 제3자 제공업체와 정보를 공유합니다."
+          ]
+        },
+        {
+          "heading": "데이터 보관 및 제어",
+          "paragraphs": [
+            "WeatherNow에서 로그아웃해 Google 계정을 연결 해제할 수 있고 Google 계정 권한에서 WeatherNow의 접근을 철회할 수도 있습니다. 사이트 브라우저 저장소를 지우면 로컬 대시보드 데이터를 삭제할 수 있습니다. Google 계정에 저장된 데이터는 Google의 관리 및 보관 설정을 따릅니다."
+          ]
+        },
+        {
+          "heading": "보안",
+          "paragraphs": [
+            "WeatherNow는 안전하게 배포될 때 표준 브라우저 보안 메커니즘과 HTTPS를 사용합니다. 어떤 인터넷 서비스도 절대적인 보안을 보장할 수 없으므로 일지에 매우 민감한 정보를 입력하지 마세요."
+          ]
+        },
+        {
+          "heading": "아동",
+          "paragraphs": [
+            "WeatherNow는 관련 법률을 위반하여 아동의 개인정보를 고의로 수집하기 위한 서비스가 아닙니다."
+          ]
+        },
+        {
+          "heading": "이 방침의 변경",
+          "paragraphs": [
+            "WeatherNow 기능 또는 법적 요구사항이 변경되면 이 개인정보 처리방침을 업데이트할 수 있습니다. 중요한 변경이 있을 경우 위 시행일도 업데이트됩니다."
+          ]
+        }
+      ],
+      "contactHeading": "문의",
+      "contactBefore": "WeatherNow 개인정보 관련 문의는 개발자에게 다음을 통해 연락할 수 있습니다:",
+      "contactLink": "WeatherNow GitHub 저장소"
+    },
+    "terms": {
+      "title": "서비스 약관",
+      "heading": "WeatherNow 서비스 약관",
+      "intro": "이 서비스 약관은 WeatherNow 사용에 적용됩니다. WeatherNow를 사용하면 이 약관에 동의하는 것입니다.",
+      "sections": [
+        {
+          "heading": "날씨 및 환경 정보",
+          "paragraphs": [
+            "WeatherNow는 외부 날씨, 환경, 지도, 위성, 레이더 및 관련 제공업체의 정보를 결합합니다. 예보와 관측은 지연되거나 불완전하거나 이용할 수 없거나 부정확할 수 있습니다. WeatherNow는 일반적인 정보 제공 목적이며 공식 비상, 항공, 해상 항법, 의료 또는 생명 안전 서비스로 간주해서는 안 됩니다."
+          ]
+        },
+        {
+          "heading": "Google 연동 기능",
+          "paragraphs": [
+            "Google Calendar 및 기타 Google 연동 기능은 선택 사항입니다. Google 계정을 연결하면 선택한 기능에 대해 승인한 권한을 WeatherNow가 사용하도록 허용합니다. Google 계정에 대한 책임은 사용자에게 있으며 Google 계정 설정에서 WeatherNow 접근을 철회할 수 있습니다."
+          ]
+        },
+        {
+          "heading": "일지 및 사용자 콘텐츠",
+          "paragraphs": [
+            "WeatherNow에 추가하는 일지 글, 사진, 위치 및 기타 콘텐츠에 대한 책임은 사용자에게 있습니다. 사용할 권리가 없는 콘텐츠를 업로드하지 마세요. 중요하다고 생각하는 백업을 유지할 책임도 사용자에게 있습니다."
+          ]
+        },
+        {
+          "heading": "제3자 서비스 및 콘텐츠",
+          "paragraphs": [
+            "WeatherNow는 날씨 제공업체, 지도 서비스, 뉴스 제공업체, Google 서비스, YouTube 및 기타 데이터 제공업체 등 제3자의 정보를 표시하거나 링크할 수 있습니다. 서비스, 콘텐츠, 이용 가능성 및 정책은 WeatherNow가 아니라 해당 제공업체가 관리합니다."
+          ]
+        },
+        {
+          "heading": "허용되는 사용",
+          "paragraphs": [
+            "WeatherNow를 관련 법률 위반, 서비스 방해, 계정/시스템 무단 접근 시도, 제3자 API 남용 또는 제3자 콘텐츠 오용에 사용해서는 안 됩니다."
+          ]
+        },
+        {
+          "heading": "이용 가능성 및 변경",
+          "paragraphs": [
+            "제공업체, API, 기술 요구사항 또는 프로젝트 필요가 바뀌면 WeatherNow는 기능을 변경, 일시 중단 또는 종료할 수 있습니다. 지속적인 이용 가능성은 보장되지 않습니다."
+          ]
+        },
+        {
+          "heading": "보증 없음",
+          "paragraphs": [
+            "관련 법률이 허용하는 범위에서 WeatherNow는 “있는 그대로” 및 “이용 가능한 상태로” 제공되며 중단 없는 운영, 오류 없는 데이터, 예보 정확성 또는 특정 목적에의 적합성을 보증하지 않습니다."
+          ]
+        },
+        {
+          "heading": "책임 제한",
+          "paragraphs": [
+            "관련 법률이 허용하는 범위에서 WeatherNow 개발자는 날씨 정보 의존, 제공업체 장애, 기능 이용 불가, 로컬 데이터 손실, 제3자 콘텐츠 또는 서비스 사용으로 인한 손실에 책임을 지지 않습니다."
+          ]
+        },
+        {
+          "heading": "약관 변경",
+          "paragraphs": [
+            "WeatherNow가 변경됨에 따라 이 약관도 업데이트될 수 있습니다. 업데이트된 버전 공개 후 계속 사용하면 관련 법률이 허용하는 범위에서 개정 약관에 동의한 것으로 간주됩니다."
+          ]
+        }
+      ],
+      "contactHeading": "문의",
+      "contactBefore": "이 약관에 관한 질문은 다음을 통해 제기할 수 있습니다:",
+      "contactLink": "WeatherNow GitHub 저장소"
+    }
+  },
+  "ru": {
+    "dir": "ltr",
+    "close": "Закрыть и вернуться к панели",
+    "closeTitle": "Закрыть",
+    "legalNav": "Правовые ссылки и ссылки приложения",
+    "privacyLabel": "Политика конфиденциальности",
+    "termsLabel": "Условия использования",
+    "effective": "Дата вступления в силу: 12 сентября 2026 г.",
+    "privacy": {
+      "title": "Политика конфиденциальности",
+      "heading": "Политика конфиденциальности WeatherNow",
+      "intro": "WeatherNow предоставляет информацию о погоде, карты, прогнозы, экологические данные, новости, функции календаря, личный погодный журнал и дополнительные мультимедийные функции. Эта политика объясняет, как обрабатывается информация при использовании WeatherNow.",
+      "sections": [
+        {
+          "heading": "Информация, которую вы предоставляете или разрешаете",
+          "paragraphs": [
+            "WeatherNow может обрабатывать выбранные вами данные, включая сохранённые места, настройки, записи журнала и добавленные фотографии. При подключении аккаунта Google WeatherNow запрашивает доступ только для инициированных вами функций Google, например календаря и синхронизации журнала."
+          ]
+        },
+        {
+          "heading": "Информация аккаунта Google",
+          "paragraphs": [
+            "При входе через Google WeatherNow может получить базовые сведения, например адрес электронной почты, и OAuth-токен, необходимый для разрешённых функций Google. Панель использует авторизацию для загрузки Google Calendar и функций журнала, связанных с Google.",
+            "Использование и передача WeatherNow данных, полученных через Google API, соответствуют политике пользовательских данных Google API Services, включая требования Limited Use."
+          ]
+        },
+        {
+          "heading": "Данные календаря и журнала",
+          "paragraphs": [
+            "Данные календаря используются для отображения событий и источников календаря в WeatherNow. Данные журнала используются для личного погодного журнала и, при включённых функциях Google, для инициированной вами синхронизации или резервного копирования."
+          ]
+        },
+        {
+          "heading": "Данные о местоположении",
+          "paragraphs": [
+            "Если вы разрешаете доступ к местоположению устройства, WeatherNow использует координаты для локальной погоды, прогнозов, карт, экологической информации и результатов по местоположению. Также можно искать или выбирать места вручную."
+          ]
+        },
+        {
+          "heading": "Локальное хранилище браузера",
+          "paragraphs": [
+            "WeatherNow использует хранилище браузера для настроек приложения, сохранённых мест, кэшированных погодных/экологических данных, состояния установки и других данных, нужных между сеансами. Очистка данных браузера или сайта может удалить локальную информацию."
+          ]
+        },
+        {
+          "heading": "Сторонние сервисы",
+          "paragraphs": [
+            "WeatherNow получает информацию и функции от сторонних сервисов, включая Google, Open-Meteo, сервисы OpenStreetMap, метеослужбы, поставщиков спутниковых/радарных данных, YouTube и издателей новостей. Они могут обрабатывать запросы по собственным политикам и условиям."
+          ]
+        },
+        {
+          "heading": "Передача и продажа персональных данных",
+          "paragraphs": [
+            "WeatherNow не продаёт ваши персональные данные. Они передаются сторонним поставщикам только когда это необходимо для запрошенных функций или требуется законом."
+          ]
+        },
+        {
+          "heading": "Хранение данных и управление",
+          "paragraphs": [
+            "Вы можете отключить аккаунт Google, выйдя из WeatherNow, а также отозвать доступ WeatherNow в разрешениях аккаунта Google. Локальные данные панели можно удалить очисткой хранилища сайта. Данные в вашем аккаунте Google остаются под правилами и настройками хранения Google."
+          ]
+        },
+        {
+          "heading": "Безопасность",
+          "paragraphs": [
+            "WeatherNow использует стандартные механизмы безопасности браузера и HTTPS при безопасном развёртывании. Ни один интернет-сервис не гарантирует абсолютную безопасность, поэтому не размещайте особо чувствительную информацию в журнале."
+          ]
+        },
+        {
+          "heading": "Дети",
+          "paragraphs": [
+            "WeatherNow не предназначен для сознательного сбора персональных данных детей в нарушение применимого законодательства."
+          ]
+        },
+        {
+          "heading": "Изменения политики",
+          "paragraphs": [
+            "Политика может обновляться при изменении функций WeatherNow или требований закона. При существенных изменениях дата вступления в силу будет обновлена."
+          ]
+        }
+      ],
+      "contactHeading": "Контакты",
+      "contactBefore": "По вопросам конфиденциальности WeatherNow свяжитесь с разработчиком через",
+      "contactLink": "репозиторий WeatherNow на GitHub"
+    },
+    "terms": {
+      "title": "Условия использования",
+      "heading": "Условия использования WeatherNow",
+      "intro": "Эти Условия регулируют использование WeatherNow. Используя WeatherNow, вы соглашаетесь с ними.",
+      "sections": [
+        {
+          "heading": "Погодная и экологическая информация",
+          "paragraphs": [
+            "WeatherNow объединяет сведения внешних поставщиков погоды, экологии, карт, спутниковых и радарных данных. Прогнозы и наблюдения могут быть задержаны, неполны, недоступны или неточны. WeatherNow предназначен для общей информации и не является официальной службой экстренной помощи, авиации, морской навигации, медицины или безопасности жизни."
+          ]
+        },
+        {
+          "heading": "Функции, связанные с Google",
+          "paragraphs": [
+            "Google Calendar и другие функции Google необязательны. Подключая аккаунт Google, вы разрешаете WeatherNow использовать одобренные вами права для выбранных функций. Вы отвечаете за свой аккаунт Google и можете отозвать доступ WeatherNow в настройках аккаунта."
+          ]
+        },
+        {
+          "heading": "Журнал и пользовательский контент",
+          "paragraphs": [
+            "Вы отвечаете за текст журнала, фотографии, места и другой контент, добавляемый в WeatherNow. Не загружайте контент, на использование которого у вас нет прав. Вы также отвечаете за важные для вас резервные копии."
+          ]
+        },
+        {
+          "heading": "Сторонние сервисы и контент",
+          "paragraphs": [
+            "WeatherNow может показывать или ссылаться на информацию третьих сторон, включая поставщиков погоды, карт, новостей, сервисы Google, YouTube и других поставщиков данных. Их услуги, контент, доступность и политики контролируются ими, а не WeatherNow."
+          ]
+        },
+        {
+          "heading": "Допустимое использование",
+          "paragraphs": [
+            "Нельзя использовать WeatherNow для нарушения закона, вмешательства в работу сервиса, попыток несанкционированного доступа к аккаунтам или системам, злоупотребления сторонними API или неправомерного использования стороннего контента."
+          ]
+        },
+        {
+          "heading": "Доступность и изменения",
+          "paragraphs": [
+            "WeatherNow может менять, приостанавливать или прекращать функции при изменении поставщиков, API, технических требований или потребностей проекта. Постоянная доступность не гарантируется."
+          ]
+        },
+        {
+          "heading": "Отсутствие гарантий",
+          "paragraphs": [
+            "В пределах, разрешённых законом, WeatherNow предоставляется «как есть» и «по мере доступности» без гарантий бесперебойной работы, безошибочных данных, точности прогноза или пригодности для конкретной цели."
+          ]
+        },
+        {
+          "heading": "Ограничение ответственности",
+          "paragraphs": [
+            "В пределах, разрешённых законом, разработчик WeatherNow не несёт ответственности за убытки из-за доверия погодной информации, сбоев поставщиков, недоступных функций, потери локальных данных, стороннего контента или использования сервиса."
+          ]
+        },
+        {
+          "heading": "Изменения условий",
+          "paragraphs": [
+            "Условия могут обновляться при изменении WeatherNow. Продолжение использования после публикации обновлённой версии означает принятие пересмотренных Условий в пределах, разрешённых законом."
+          ]
+        }
+      ],
+      "contactHeading": "Контакты",
+      "contactBefore": "Вопросы по этим Условиям можно задать через",
+      "contactLink": "репозиторий WeatherNow на GitHub"
+    }
+  },
+  "ar": {
+    "dir": "rtl",
+    "close": "إغلاق والعودة إلى لوحة المعلومات",
+    "closeTitle": "إغلاق",
+    "legalNav": "روابط قانونية وروابط التطبيق",
+    "privacyLabel": "سياسة الخصوصية",
+    "termsLabel": "شروط الخدمة",
+    "effective": "تاريخ السريان: 12 سبتمبر 2026",
+    "privacy": {
+      "title": "سياسة الخصوصية",
+      "heading": "سياسة خصوصية WeatherNow",
+      "intro": "يوفر WeatherNow معلومات الطقس والخرائط والتوقعات والمعلومات البيئية والأخبار وميزات التقويم ويوميات طقس شخصية وميزات وسائط اختيارية. توضح هذه السياسة كيفية التعامل مع المعلومات عند استخدام WeatherNow.",
+      "sections": [
+        {
+          "heading": "المعلومات التي تقدمها أو تسمح بها",
+          "paragraphs": [
+            "قد يعالج WeatherNow المعلومات التي تختار تقديمها، بما في ذلك المواقع المحفوظة والإعدادات وإدخالات اليوميات والصور المضافة إليها. عند ربط حساب Google، يطلب WeatherNow الوصول فقط للميزات المتكاملة مع Google التي تبدأها أنت، مثل الوصول إلى التقويم والمزامنة المتعلقة باليوميات."
+          ]
+        },
+        {
+          "heading": "معلومات حساب Google",
+          "paragraphs": [
+            "إذا سجلت الدخول باستخدام Google، فقد يتلقى WeatherNow معلومات أساسية مثل عنوان بريدك الإلكتروني ورمز وصول OAuth اللازم لاستخدام ميزات Google التي تسمح بها. تستخدم لوحة المعلومات هذا التفويض لتحميل Google Calendar وتوفير وظائف اليوميات المرتبطة بـ Google.",
+            "يلتزم استخدام WeatherNow ونقله للمعلومات المستلمة من Google APIs بسياسة بيانات مستخدم خدمات Google API، بما في ذلك متطلبات الاستخدام المحدود."
+          ]
+        },
+        {
+          "heading": "بيانات التقويم واليوميات",
+          "paragraphs": [
+            "تُستخدم معلومات التقويم لعرض الأحداث ومصادر التقويم داخل WeatherNow. وتُستخدم معلومات اليوميات لتوفير يوميات الطقس الشخصية، وعند تفعيل ميزات Google، لدعم المزامنة أو النسخ الاحتياطي الذي تبدأه أنت."
+          ]
+        },
+        {
+          "heading": "معلومات الموقع",
+          "paragraphs": [
+            "إذا سمحت بالوصول إلى موقع الجهاز، يستخدم WeatherNow إحداثياتك لتوفير الطقس المحلي والتوقعات والخرائط والمعلومات البيئية والنتائج القريبة أو المعتمدة على الموقع. ويمكنك أيضًا البحث عن المواقع أو اختيارها يدويًا."
+          ]
+        },
+        {
+          "heading": "التخزين المحلي للمتصفح",
+          "paragraphs": [
+            "يستخدم WeatherNow تخزين المتصفح لإعدادات التطبيق والمواقع المحفوظة وبيانات الطقس أو البيئة المخزنة مؤقتًا وحالة التثبيت وغيرها من البيانات اللازمة بين الجلسات. قد يؤدي مسح بيانات المتصفح أو الموقع إلى حذف المعلومات المحلية."
+          ]
+        },
+        {
+          "heading": "خدمات الجهات الخارجية",
+          "paragraphs": [
+            "يحصل WeatherNow على معلومات أو وظائف من خدمات خارجية قد تشمل Google وOpen-Meteo وخدمات مرتبطة بـ OpenStreetMap وهيئات الأرصاد ومزودي الأقمار الصناعية/الرادار وYouTube وناشري الأخبار. وقد تعالج هذه الجهات الطلبات وفق سياساتها وشروطها الخاصة."
+          ]
+        },
+        {
+          "heading": "مشاركة وبيع المعلومات الشخصية",
+          "paragraphs": [
+            "لا يبيع WeatherNow معلوماتك الشخصية. ولا تتم مشاركة المعلومات مع مزودي الجهات الخارجية إلا عند الحاجة لتقديم ميزة تطلبها أو عندما يفرض القانون ذلك."
+          ]
+        },
+        {
+          "heading": "الاحتفاظ بالبيانات والتحكم بها",
+          "paragraphs": [
+            "يمكنك فصل حساب Google عن WeatherNow بتسجيل الخروج، كما يمكنك إزالة وصول WeatherNow من أذونات حساب Google. ويمكن حذف بيانات لوحة المعلومات المحلية بمسح تخزين الموقع. أما البيانات المخزنة في حساب Google فتظل خاضعة لضوابط Google وإعدادات الاحتفاظ."
+          ]
+        },
+        {
+          "heading": "الأمان",
+          "paragraphs": [
+            "يستخدم WeatherNow آليات أمان المتصفح القياسية وHTTPS عند النشر الآمن. لا يمكن لأي خدمة إنترنت ضمان الأمان المطلق، لذلك يُنصح بعدم وضع معلومات شديدة الحساسية في اليوميات."
+          ]
+        },
+        {
+          "heading": "الأطفال",
+          "paragraphs": [
+            "لا يهدف WeatherNow إلى جمع معلومات شخصية عن الأطفال عن علم بما يخالف القانون المعمول به."
+          ]
+        },
+        {
+          "heading": "التغييرات على هذه السياسة",
+          "paragraphs": [
+            "قد يتم تحديث هذه السياسة مع تغير ميزات WeatherNow أو المتطلبات القانونية. وسيتم تحديث تاريخ السريان أعلاه عند إجراء تغييرات جوهرية."
+          ]
+        }
+      ],
+      "contactHeading": "التواصل",
+      "contactBefore": "لأسئلة الخصوصية حول WeatherNow، تواصل مع المطور عبر",
+      "contactLink": "مستودع WeatherNow على GitHub"
+    },
+    "terms": {
+      "title": "شروط الخدمة",
+      "heading": "شروط خدمة WeatherNow",
+      "intro": "تحكم شروط الخدمة هذه استخدامك لـ WeatherNow. باستخدام WeatherNow فإنك توافق على هذه الشروط.",
+      "sections": [
+        {
+          "heading": "معلومات الطقس والبيئة",
+          "paragraphs": [
+            "يجمع WeatherNow معلومات من مزودي الطقس والبيئة والخرائط والأقمار الصناعية والرادار وغيرهم. قد تكون التوقعات والمشاهدات متأخرة أو ناقصة أو غير متاحة أو غير دقيقة. يوفر WeatherNow معلومات عامة فقط ولا يجب اعتباره خدمة رسمية للطوارئ أو الطيران أو الملاحة البحرية أو الطب أو سلامة الحياة."
+          ]
+        },
+        {
+          "heading": "الميزات المرتبطة بـ Google",
+          "paragraphs": [
+            "Google Calendar والوظائف الأخرى المرتبطة بـ Google اختيارية. بربط حساب Google، تفوض WeatherNow باستخدام الأذونات التي توافق عليها للميزات التي تختارها. تظل مسؤولًا عن حساب Google ويمكنك إلغاء وصول WeatherNow من إعدادات حساب Google."
+          ]
+        },
+        {
+          "heading": "اليوميات ومحتوى المستخدم",
+          "paragraphs": [
+            "أنت مسؤول عن نصوص اليوميات والصور والمواقع وأي محتوى آخر تضيفه إلى WeatherNow. لا ترفع محتوى لا تملك حق استخدامه. كما أنك مسؤول عن الاحتفاظ بأي نسخ احتياطية تراها مهمة."
+          ]
+        },
+        {
+          "heading": "خدمات ومحتوى الجهات الخارجية",
+          "paragraphs": [
+            "قد يعرض WeatherNow أو يربط معلومات من جهات خارجية، بما في ذلك مزودو الطقس وخدمات الخرائط وناشرو الأخبار وخدمات Google وYouTube وغيرهم. تتحكم تلك الجهات في خدماتها ومحتواها وتوفرها وسياساتها، وليس WeatherNow."
+          ]
+        },
+        {
+          "heading": "الاستخدام المقبول",
+          "paragraphs": [
+            "لا يجوز استخدام WeatherNow لانتهاك القانون المعمول به أو التدخل في الخدمة أو محاولة الوصول غير المصرح به إلى الحسابات أو الأنظمة أو إساءة استخدام واجهات API الخارجية أو محتوى الجهات الخارجية."
+          ]
+        },
+        {
+          "heading": "التوفر والتغييرات",
+          "paragraphs": [
+            "قد يغير WeatherNow الميزات أو يعلقها أو يوقفها عندما تتغير الجهات المزودة أو واجهات API أو المتطلبات التقنية أو احتياجات المشروع. لا يوجد ضمان للتوفر المستمر."
+          ]
+        },
+        {
+          "heading": "عدم وجود ضمانات",
+          "paragraphs": [
+            "يُقدم WeatherNow «كما هو» و«حسب التوفر» دون ضمان التشغيل المتواصل أو خلو البيانات من الأخطاء أو دقة التوقعات أو الملاءمة لغرض محدد، ضمن الحدود التي يسمح بها القانون."
+          ]
+        },
+        {
+          "heading": "تحديد المسؤولية",
+          "paragraphs": [
+            "ضمن الحدود التي يسمح بها القانون، لا يكون مطور WeatherNow مسؤولًا عن الخسائر الناتجة عن الاعتماد على معلومات الطقس أو انقطاع المزودين أو عدم توفر الميزات أو فقدان البيانات المحلية أو محتوى الجهات الخارجية أو استخدام الخدمة."
+          ]
+        },
+        {
+          "heading": "التغييرات على الشروط",
+          "paragraphs": [
+            "قد يتم تحديث هذه الشروط مع تغير WeatherNow. ويُعد استمرار الاستخدام بعد نشر نسخة محدثة قبولًا للشروط المعدلة ضمن الحدود التي يسمح بها القانون."
+          ]
+        }
+      ],
+      "contactHeading": "التواصل",
+      "contactBefore": "يمكن طرح الأسئلة حول هذه الشروط عبر",
+      "contactLink": "مستودع WeatherNow على GitHub"
+    }
+  }
+} as Record<string, LegalLanguageContent>;
+
+  const legalLanguage = (value: unknown) => {
+    const raw = typeof value === 'string' ? value.toLowerCase().split('-')[0] : 'en';
+    return Object.prototype.hasOwnProperty.call(legalContent, raw) ? raw : 'en';
+  };
+  const escapeLegalHtml = (value: string) => value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+  const renderLegalDocument = (doc: LegalDocument, labels: LegalLanguageContent) => `
+    <h1>${escapeLegalHtml(doc.heading)}</h1>
+    <p class="meta">${escapeLegalHtml(labels.effective)}</p>
+    <p>${escapeLegalHtml(doc.intro)}</p>
+    ${doc.sections.map(section => `<h2>${escapeLegalHtml(section.heading)}</h2>${section.paragraphs.map(paragraph => `<p>${escapeLegalHtml(paragraph)}</p>`).join('')}`).join('')}
+    <h2>${escapeLegalHtml(doc.contactHeading)}</h2>
+    <p>${escapeLegalHtml(doc.contactBefore)} <a href="https://github.com/unknownjed/WeatherNow" rel="noopener noreferrer">${escapeLegalHtml(doc.contactLink)}</a>.</p>`;
+
+  const renderLegalPage = (lang: string, doc: LegalDocument, labels: LegalLanguageContent) => `<!doctype html>
+<html lang="${lang}" dir="${labels.dir}">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
-  <title>${title} | WeatherNow</title>
+  <title>${escapeLegalHtml(doc.title)} | WeatherNow</title>
   <style>
     :root { color-scheme: light dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
     * { box-sizing: border-box; }
@@ -2024,138 +3398,41 @@ app.get("/api/nhc-cyclones", async (_req, res) => {
     .meta { color: #64748b; margin: 0 0 1.75rem; }
     a { color: #2563eb; }
     nav { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid #e2e8f0; }
-    .close-button {
-      position: fixed;
-      top: max(14px, env(safe-area-inset-top, 0px));
-      right: max(14px, env(safe-area-inset-right, 0px));
-      z-index: 20;
-      width: 42px;
-      height: 42px;
-      border: 1px solid #cbd5e1;
-      border-radius: 999px;
-      background: rgba(255,255,255,.94);
-      color: #0f172a;
-      font: 700 26px/1 system-ui, sans-serif;
-      display: grid;
-      place-items: center;
-      cursor: pointer;
-      box-shadow: 0 8px 24px rgba(15,23,42,.14);
-    }
+    .close-button { position: fixed; top: max(14px, env(safe-area-inset-top, 0px)); right: max(14px, env(safe-area-inset-right, 0px)); z-index: 20; width: 42px; height: 42px; border: 1px solid #cbd5e1; border-radius: 999px; background: rgba(255,255,255,.94); color: #0f172a; font: 700 26px/1 system-ui, sans-serif; display: grid; place-items: center; cursor: pointer; box-shadow: 0 8px 24px rgba(15,23,42,.14); }
     .close-button:hover { background: #f1f5f9; }
     .close-button:focus-visible { outline: 3px solid #60a5fa; outline-offset: 2px; }
-    @media (prefers-color-scheme: dark) {
-      body { background: #020617; color: #e2e8f0; }
-      .card { background: #0f172a; border-color: #334155; box-shadow: none; }
-      .meta { color: #94a3b8; }
-      a { color: #60a5fa; }
-      nav { border-color: #334155; }
-      .close-button { background: rgba(15,23,42,.94); color: #e2e8f0; border-color: #475569; }
-      .close-button:hover { background: #1e293b; }
-    }
+    @media (prefers-color-scheme: dark) { body { background: #020617; color: #e2e8f0; } .card { background: #0f172a; border-color: #334155; box-shadow: none; } .meta { color: #94a3b8; } a { color: #60a5fa; } nav { border-color: #334155; } .close-button { background: rgba(15,23,42,.94); color: #e2e8f0; border-color: #475569; } .close-button:hover { background: #1e293b; } }
   </style>
 </head>
 <body>
-  <button class="close-button" type="button" aria-label="Close and return to dashboard" title="Close" onclick="if (history.length > 1) { history.back(); } else { location.href = '/'; }">&times;</button>
-  <main>
-    <article class="card">
-      ${body}
-      <nav aria-label="Legal and app links">
-        <a href="/">WeatherNow</a>
-        <a href="/privacy">Privacy Policy</a>
-        <a href="/terms">Terms of Service</a>
-      </nav>
-    </article>
-  </main>
+  <button class="close-button" type="button" aria-label="${escapeLegalHtml(labels.close)}" title="${escapeLegalHtml(labels.closeTitle)}" onclick="if (history.length > 1) { history.back(); } else { location.href = '/'; }">&times;</button>
+  <main><article class="card">
+    ${renderLegalDocument(doc, labels)}
+    <nav aria-label="${escapeLegalHtml(labels.legalNav)}">
+      <a href="/">WeatherNow</a>
+      <a href="/privacy?lang=${lang}">${escapeLegalHtml(labels.privacyLabel)}</a>
+      <a href="/terms?lang=${lang}">${escapeLegalHtml(labels.termsLabel)}</a>
+    </nav>
+  </article></main>
 </body>
 </html>`;
 
-  app.get('/privacy', (_req, res) => {
+  app.get('/privacy', (req, res) => {
+    const lang = legalLanguage(req.query.lang);
+    const labels = legalContent[lang];
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=300');
-    res.send(renderLegalPage('Privacy Policy', `
-      <h1>WeatherNow Privacy Policy</h1>
-      <p class="meta">Effective date: September 12, 2026</p>
-
-      <p>WeatherNow provides weather information, maps, forecasts, environmental information, news, calendar features, a personal weather journal, and optional media features. This Privacy Policy explains how information is handled when you use WeatherNow.</p>
-
-      <h2>Information you provide or authorize</h2>
-      <p>WeatherNow may process information you choose to provide, including saved locations, settings, journal entries, and photos you add to journal entries. When you choose to connect a Google account, WeatherNow requests access only for Google-integrated features that you initiate, such as Calendar access and journal-related synchronization.</p>
-
-      <h2>Google account information</h2>
-      <p>If you sign in with Google, WeatherNow may receive basic account information such as your email address and an OAuth access token needed to use the Google features you authorize. The dashboard uses that authorization to load Google Calendar information and to provide Google-connected journal functionality.</p>
-      <p>WeatherNow's use and transfer of information received from Google APIs will adhere to the Google API Services User Data Policy, including the Limited Use requirements.</p>
-
-      <h2>Calendar and journal data</h2>
-      <p>Calendar information is used to display events and calendar sources inside WeatherNow. Journal information is used to provide the personal weather journal and, when Google-connected features are enabled, to support synchronization or backup functionality initiated by you.</p>
-
-      <h2>Location information</h2>
-      <p>If you allow device location access, WeatherNow uses your coordinates to provide local weather, forecasts, maps, environmental information, and nearby or location-based results. You can also search for or select locations manually.</p>
-
-      <h2>Local browser storage</h2>
-      <p>WeatherNow uses browser storage for app settings, saved locations, cached weather or environmental information, installation state, and other data needed to keep the dashboard working between sessions. Clearing browser or site data may remove locally stored information.</p>
-
-      <h2>Third-party services</h2>
-      <p>WeatherNow retrieves information or functionality from third-party services used by the dashboard, which may include Google services, Open-Meteo, OpenStreetMap-related services, weather agencies, satellite/radar providers, YouTube, and news publishers. Those providers may process requests under their own privacy policies and terms.</p>
-
-      <h2>Sharing and sale of personal information</h2>
-      <p>WeatherNow does not sell your personal information. Information is shared with third-party providers only as needed to provide features you request or when required by law.</p>
-
-      <h2>Data retention and control</h2>
-      <p>You can disconnect your Google account from WeatherNow by signing out. You can also remove WeatherNow's Google account access from your Google Account permissions. Locally stored dashboard data can be removed by clearing the site's browser storage. Data stored in your own Google account remains subject to Google's controls and retention settings.</p>
-
-      <h2>Security</h2>
-      <p>WeatherNow uses standard browser security mechanisms and HTTPS when deployed securely. No internet service can guarantee absolute security, so users should avoid placing highly sensitive information in journal entries.</p>
-
-      <h2>Children</h2>
-      <p>WeatherNow is not intended to knowingly collect personal information from children in violation of applicable law.</p>
-
-      <h2>Changes to this policy</h2>
-      <p>This Privacy Policy may be updated as WeatherNow features or legal requirements change. The effective date above will be updated when material changes are made.</p>
-
-      <h2>Contact</h2>
-      <p>For privacy questions about WeatherNow, contact the developer through the <a href="https://github.com/unknownjed/WeatherNow" rel="noopener noreferrer">WeatherNow GitHub repository</a>.</p>
-    `));
+    res.setHeader('Content-Language', lang);
+    res.send(renderLegalPage(lang, labels.privacy, labels));
   });
 
-  app.get('/terms', (_req, res) => {
+  app.get('/terms', (req, res) => {
+    const lang = legalLanguage(req.query.lang);
+    const labels = legalContent[lang];
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=300');
-    res.send(renderLegalPage('Terms of Service', `
-      <h1>WeatherNow Terms of Service</h1>
-      <p class="meta">Effective date: September 12, 2026</p>
-
-      <p>These Terms of Service govern your use of WeatherNow. By using WeatherNow, you agree to these terms.</p>
-
-      <h2>Weather and environmental information</h2>
-      <p>WeatherNow combines information from external weather, environmental, mapping, satellite, radar, and related providers. Forecasts and observations may be delayed, incomplete, unavailable, or inaccurate. WeatherNow is provided for general informational purposes and must not be treated as an official emergency, aviation, marine-navigation, medical, or life-safety service.</p>
-
-      <h2>Google-connected features</h2>
-      <p>Google Calendar and other Google-connected functionality is optional. By connecting a Google account, you authorize WeatherNow to use the permissions you approve for the features you choose to use. You remain responsible for your Google account and may revoke WeatherNow's access through your Google Account settings.</p>
-
-      <h2>Journal and user content</h2>
-      <p>You are responsible for journal text, photos, locations, and other content you add to WeatherNow. Do not upload content you do not have the right to use. You are responsible for maintaining any backups you consider important.</p>
-
-      <h2>Third-party services and content</h2>
-      <p>WeatherNow may display or link to information from third parties, including weather providers, map services, news publishers, Google services, YouTube, and other data providers. Their services, content, availability, and policies are controlled by those providers, not WeatherNow.</p>
-
-      <h2>Acceptable use</h2>
-      <p>You may not use WeatherNow to violate applicable law, interfere with the service, attempt unauthorized access to accounts or systems, abuse third-party APIs, or misuse content supplied by third-party providers.</p>
-
-      <h2>Availability and changes</h2>
-      <p>WeatherNow may change, suspend, or discontinue features when providers, APIs, technical requirements, or project needs change. Continuous availability is not guaranteed.</p>
-
-      <h2>No warranties</h2>
-      <p>WeatherNow is provided on an "as is" and "as available" basis without warranties of uninterrupted operation, error-free data, forecast accuracy, or fitness for a particular purpose, to the extent permitted by applicable law.</p>
-
-      <h2>Limitation of liability</h2>
-      <p>To the extent permitted by applicable law, the developer of WeatherNow is not liable for losses resulting from reliance on weather information, provider outages, unavailable features, lost locally stored data, third-party content, or use of the service.</p>
-
-      <h2>Changes to these terms</h2>
-      <p>These Terms may be updated as WeatherNow changes. Continued use after an updated version is published constitutes acceptance of the revised Terms to the extent permitted by applicable law.</p>
-
-      <h2>Contact</h2>
-      <p>Questions about these Terms can be raised through the <a href="https://github.com/unknownjed/WeatherNow" rel="noopener noreferrer">WeatherNow GitHub repository</a>.</p>
-    `));
+    res.setHeader('Content-Language', lang);
+    res.send(renderLegalPage(lang, labels.terms, labels));
   });
 
   // Vite middleware for development.
