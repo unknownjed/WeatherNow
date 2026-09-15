@@ -3372,7 +3372,7 @@ app.get("/api/nhc-cyclones", async (_req, res) => {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
   const renderLegalDocument = (doc: LegalDocument, labels: LegalLanguageContent) => `
-    <h1>${escapeLegalHtml(doc.heading)}</h1>
+    <h1 class="legal-title"><span class="legal-brand">WeatherNow</span><span class="legal-page-title">${escapeLegalHtml(doc.heading).replace(/^WeatherNow\s+/i, '')}</span></h1>
     <p class="meta">${escapeLegalHtml(labels.effective)}</p>
     <p>${escapeLegalHtml(doc.intro)}</p>
     ${doc.sections.map(section => `<h2>${escapeLegalHtml(section.heading)}</h2>${section.paragraphs.map(paragraph => `<p>${escapeLegalHtml(paragraph)}</p>`).join('')}`).join('')}
@@ -3393,6 +3393,8 @@ app.get("/api/nhc-cyclones", async (_req, res) => {
     main { width: min(900px, calc(100% - 32px)); margin: 40px auto; }
     .card { background: #fff; border: 1px solid #cbd5e1; border-radius: 16px; padding: clamp(20px, 4vw, 36px); box-shadow: 0 12px 35px rgba(15,23,42,.08); }
     h1 { margin: 0 0 4px; font-size: clamp(1.8rem, 4vw, 2.5rem); }
+    .legal-title { display: flex; flex-direction: column; align-items: center; text-align: center; line-height: 1.08; gap: .12em; margin-bottom: .55rem; }
+    .legal-brand, .legal-page-title { display: block; }
     h2 { margin-top: 2rem; font-size: 1.15rem; }
     p, li { font-size: .98rem; }
     .meta { color: #64748b; margin: 0 0 1.75rem; }

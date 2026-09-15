@@ -791,7 +791,12 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, setSetti
               <div className="rounded-lg border border-sky-200 !bg-white p-3 text-left dark:border-slate-700 dark:!bg-slate-950/70">
                 <div className="text-xs font-bold text-sky-950 dark:text-slate-200">{aboutDetails.sourcesTitle}</div>
                 <ul className="mt-2 space-y-1 text-[11px] leading-relaxed text-slate-700 dark:text-slate-300">
-                  {aboutDetails.sources.map((source) => <li key={source}>• {source}</li>)}
+                  {aboutDetails.sources.map((source) => (
+                    <li key={source} className="flex items-start gap-1.5">
+                      <span aria-hidden="true" className="shrink-0">•</span>
+                      <span className="min-w-0">{source}</span>
+                    </li>
+                  ))}
                 </ul>
               </div>
 
