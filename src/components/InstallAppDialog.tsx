@@ -12,6 +12,7 @@ export function InstallAppDialog({ installed, prompt, language, onPromptUsed, on
   const busy = useRef(false);
   const mounted = useRef(true);
   const [status, setStatus] = useState<'ready' | 'pending' | 'accepted' | 'dismissed' | 'error'>('ready');
+  const [installPressed, setInstallPressed] = useState(false);
   useEffect(() => {
     mounted.current = true;
     const element = dialog.current!;
@@ -50,7 +51,16 @@ export function InstallAppDialog({ installed, prompt, language, onPromptUsed, on
       <p role="status" className="text-sm leading-relaxed">{message}</p>
       <div className="mt-5 flex justify-end gap-2">
         <button type="button" onClick={onDismiss} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-900 !shadow-none hover:!shadow-none focus:!shadow-none active:!shadow-none hover:bg-sky-100 hover:border-sky-400 hover:text-sky-950 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700" style={{ boxShadow: 'none' }}>{prompt && !installed && status === 'ready' ? 'Not now' : 'Close'}</button>
-        {!installed && prompt && status === 'ready' && <button type="button" onClick={() => void install()} className="install-app-button rounded-lg border !border-blue-700 !bg-blue-600 px-4 py-2 text-sm font-bold !text-white shadow-sm transition-all hover:!bg-blue-500 hover:!shadow-[inset_0_0_0_2px_rgba(37,99,235,1),inset_0_0_10px_rgba(59,130,246,0.98),inset_0_0_18px_rgba(96,165,250,0.78)] active:!bg-blue-500 active:!shadow-[inset_0_0_0_2px_rgba(37,99,235,1),inset_0_0_10px_rgba(59,130,246,0.98),inset_0_0_18px_rgba(96,165,250,0.78)] focus-visible:!shadow-[inset_0_0_0_2px_rgba(37,99,235,1),inset_0_0_10px_rgba(59,130,246,0.98),inset_0_0_18px_rgba(96,165,250,0.78)] dark:border-blue-700 dark:bg-blue-600 dark:text-white dark:hover:bg-blue-500 dark:active:bg-blue-500">{t('installApp')}</button>}
+        {!installed && prompt && status === 'ready' && <button
+          type="button"
+          onClick={() => void install()}
+          onPointerDown={() => { if (window.matchMedia('(hover: none), (pointer: coarse)').matches) setInstallPressed(true); }}
+          onPointerUp={() => setInstallPressed(false)}
+          onPointerCancel={() => setInstallPressed(false)}
+          onPointerLeave={() => setInstallPressed(false)}
+          className="install-app-button rounded-lg border !border-blue-700 !bg-blue-600 px-4 py-2 text-sm font-bold !text-white shadow-sm transition-all hover:!bg-blue-500 hover:!shadow-[inset_0_0_0_2px_rgba(37,99,235,1),inset_0_0_10px_rgba(59,130,246,0.98),inset_0_0_18px_rgba(96,165,250,0.78)] dark:border-blue-700 dark:bg-blue-600 dark:text-white dark:hover:bg-blue-500"
+          style={installPressed ? { boxShadow: 'inset 0 0 0 2px rgba(37,99,235,1), inset 0 0 10px rgba(59,130,246,0.98), inset 0 0 18px rgba(96,165,250,0.78)' } : undefined}
+        >{t('installApp')}</button>}
       </div>
     </div>
   </dialog>;
