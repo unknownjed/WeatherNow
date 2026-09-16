@@ -13,11 +13,21 @@ export function InstallAppDialog({ installed, prompt, language, onPromptUsed, on
   const mounted = useRef(true);
   const [status, setStatus] = useState<'ready' | 'pending' | 'accepted' | 'dismissed' | 'error'>('ready');
   const [installPressed, setInstallPressed] = useState(false);
+  const [installHovered, setInstallHovered] = useState(false);
+  const [darkAppearance, setDarkAppearance] = useState(() => document.documentElement.classList.contains('dark'));
   useEffect(() => {
     mounted.current = true;
     const element = dialog.current!;
     element.showModal();
     return () => { mounted.current = false; element.close(); };
+  }, []);
+  useEffect(() => {
+    const root = document.documentElement;
+    const syncAppearance = () => setDarkAppearance(root.classList.contains('dark'));
+    syncAppearance();
+    const observer = new MutationObserver(syncAppearance);
+    observer.observe(root, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
   }, []);
   const install = async () => {
     if (!prompt || busy.current || installed) return;
@@ -54,12 +64,17 @@ export function InstallAppDialog({ installed, prompt, language, onPromptUsed, on
         {!installed && prompt && status === 'ready' && <button
           type="button"
           onClick={() => void install()}
-          onPointerDown={() => { if (window.matchMedia('(hover: none), (pointer: coarse)').matches) setInstallPressed(true); }}
+          onMouseEnter={() => setInstallHovered(true)}
+          onMouseLeave={() => setInstallHovered(false)}
+          onPointerDown={() => setInstallPressed(true)}
           onPointerUp={() => setInstallPressed(false)}
           onPointerCancel={() => setInstallPressed(false)}
-          onPointerLeave={() => setInstallPressed(false)}
-          className="install-app-button rounded-lg border !border-blue-700 !bg-blue-600 px-4 py-2 text-sm font-bold !text-white shadow-sm transition-all hover:!bg-blue-500 hover:!shadow-[inset_0_0_0_2px_rgba(37,99,235,1),inset_0_0_10px_rgba(59,130,246,0.98),inset_0_0_18px_rgba(96,165,250,0.78)] dark:border-blue-700 dark:bg-blue-600 dark:text-white dark:hover:bg-blue-500"
-          style={installPressed ? { boxShadow: 'inset 0 0 0 2px rgba(37,99,235,1), inset 0 0 10px rgba(59,130,246,0.98), inset 0 0 18px rgba(96,165,250,0.78)' } : undefined}
+          className="install-app-button rounded-lg border !border-blue-700 !bg-blue-600 px-4 py-2 text-sm font-bold !text-white shadow-sm transition-all hover:!bg-blue-500 dark:!border-blue-500 dark:!bg-blue-600 dark:!text-white dark:hover:!bg-blue-500"
+          style={(installHovered || installPressed) ? {
+            boxShadow: darkAppearance
+              ? 'inset 0 0 0 2px rgba(96,165,250,1), inset 0 0 10px rgba(96,165,250,0.98), inset 0 0 18px rgba(59,130,246,0.86)'
+              : 'inset 0 0 0 2px rgba(55,65,81,1), inset 0 0 10px rgba(55,65,81,0.92), inset 0 0 18px rgba(75,85,99,0.78)'
+          } : undefined}
         >{t('installApp')}</button>}
       </div>
     </div>
