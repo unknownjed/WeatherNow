@@ -3,16 +3,12 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "/api/index"
-    },
-    {
       "source": "/privacy",
-      "destination": "/api/index?path=legal/privacy"
+      "destination": "/api/legal/privacy"
     },
     {
       "source": "/terms",
-      "destination": "/api/index?path=legal/terms"
+      "destination": "/api/legal/terms"
     }
   ]
 }
