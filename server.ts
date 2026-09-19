@@ -108,11 +108,9 @@ async function fetchPagasaRadarBytes(url: URL) {
 
 import express from "express";
 import path from "path";
-import { createServer as createViteServer } from "vite";
 
-async function startServer() {
+export async function createApp() {
   const app = express();
-  const PORT = Number(process.env.PORT) || 3001;
 
   // Middleware to parse JSON
   app.use(express.json());
@@ -3451,7 +3449,10 @@ app.get("/api/nhc-cyclones", async (_req, res) => {
   const npmLifecycleEvent = String(process.env.npm_lifecycle_event || '').toLowerCase();
   const isExplicitDevRun = npmLifecycleEvent === 'dev' || npmLifecycleEvent === 'dev:watch';
 
-  if (isExplicitDevRun || process.env.NODE_ENV !== "production") {
+  // On Vercel, this Express app is used only for backend/legal routes.
+  // Vercel serves the Vite frontend separately from dist.
+  if (!process.env.VERCEL && (isExplicitDevRun || process.env.NODE_ENV !== "production")) {
+    const { createServer: createViteServer } = await import('vite');
     // Kill any service worker left behind by an older production/PWA build.
     // Without this, an installed mobile/tablet PWA can keep serving an old
     // precached index and asset bundle even though Vite is serving fresh source.
@@ -3465,7 +3466,7 @@ app.get("/api/nhc-cyclones", async (_req, res) => {
       appType: "spa",
     });
     app.use(vite.middlewares);
-  } else {
+  } else if (!process.env.VERCEL) {
     const distPath = path.join(process.cwd(), 'dist');
     app.get('/sw.js', (req, res) => {
       res.setHeader('Service-Worker-Allowed', '/');
@@ -3497,12 +3498,21 @@ app.get("/api/nhc-cyclones", async (_req, res) => {
     });
   }
 
+  return app;
+}
+
+async function startStandaloneServer() {
+  const app = await createApp();
+  const PORT = Number(process.env.PORT) || 3001;
+
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }
 
-startServer();
+if (!process.env.VERCEL) {
+  void startStandaloneServer();
+}
 
 
 
