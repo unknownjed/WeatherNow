@@ -4,15 +4,15 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "/api/index?__path=/api/:path*"
+      "destination": "/api/index"
     },
     {
       "source": "/privacy",
-      "destination": "/api/index?__path=/privacy"
+      "destination": "/api/index?path=legal/privacy"
     },
     {
       "source": "/terms",
-      "destination": "/api/index?__path=/terms"
+      "destination": "/api/index?path=legal/terms"
     }
   ]
 }
