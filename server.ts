@@ -110,7 +110,7 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 
-export async function createApp() {
+async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT) || 3001;
 
@@ -3497,21 +3497,12 @@ app.get("/api/nhc-cyclones", async (_req, res) => {
     });
   }
 
-  return app;
-}
-
-async function startStandaloneServer() {
-  const app = await createApp();
-  const PORT = Number(process.env.PORT) || 3001;
-
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }
 
-if (!process.env.VERCEL) {
-  void startStandaloneServer();
-}
+startServer();
 
 
 
